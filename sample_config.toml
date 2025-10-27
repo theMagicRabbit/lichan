@@ -1,0 +1,10 @@
+# Personal access token
+pat = ""
+
+# List of lichess usernames to download
+usernames = [ "a_lurk", ]
+
+# Directory to that game PGN files will be downloaded and saved to.
+# Username will be appended to this path so each user's games are
+# stored in their own folder.
+game_directory = "~/Games/lichess/"
