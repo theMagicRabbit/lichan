@@ -27,4 +27,9 @@ func main() {
 	state := state{
 		config: config,
 	}
+
+	err = state.config.CreateDirs()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
