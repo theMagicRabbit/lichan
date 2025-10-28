@@ -60,7 +60,7 @@ type Game struct {
 	} `json:"clock"`
 }
 
-func (g *Game) WriteGame(s *state) error {
+func (g *Game) WriteGame(s *state, outputDir string) error {
 	gameString, err := GameToPGN(g, s.SiteUrl)
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func (g *Game) WriteGame(s *state) error {
 	gameDate := fmt.Sprintf("%d.%d.%d", gameYear, gameMonth, gameDay)
 
 	fileTitle := fmt.Sprintf("%s_%s.pgn", gameDate, g.ID)
-	gameFilePath := fmt.Sprintf("%s/%s", s.Config.GameDirectory, fileTitle)
+	gameFilePath := fmt.Sprintf("%s/%s", outputDir, fileTitle)
 	err = os.WriteFile(gameFilePath, []byte(gameString), 0644)
 	if err != nil {
 		return err

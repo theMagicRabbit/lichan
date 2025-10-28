@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path"
 )
 
 func (s *state) handlerDownloads(username string) error {
-	opts := "opening=true?sort=dateAsc"
+	opts := "opening=true&sort=dateAsc"
 	reqUrl := fmt.Sprintf("%s%s%s?%s", s.ApiUrl, "/api/games/user/", username, opts)
 
 	if s.Config.LastGameTime > 0 {
@@ -50,7 +51,8 @@ func (s *state) handlerDownloads(username string) error {
 	}
 
 	for _, game := range games {
-		err := game.WriteGame(s)
+		outputDir := path.Join(s.Config.GameDirectory, username)
+		err := game.WriteGame(s, outputDir)
 		if err != nil {
 			return err
 		}
