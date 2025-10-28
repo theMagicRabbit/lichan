@@ -60,19 +60,19 @@ type Game struct {
 
 func GameToPGN(game Game, url string) (string, error) {
 	pgnTemplate := `[Event "%s"]
-	[Site "%s/%s"]
-	[Date "%s"]
-	[Round "-"]
-	[White "%s"]
-	[Black "%s"]
-	[Result "%s"]
-	[GameId "%s"]
-	[WhiteElo "%d"]
-	[BlackElo "%d"]
-	[Opening "%s"]
-	[TimeControl "%s"]
-	
-	%s
+[Site "%s/%s"]
+[Date "%s"]
+[Round "-"]
+[White "%s"]
+[Black "%s"]
+[Result "%s"]
+[GameId "%s"]
+[WhiteElo "%d"]
+[BlackElo "%d"]
+[Opening "%s"]
+[TimeControl "%s"]
+
+%s
 	`
 	var event string
 	if game.Rated {
