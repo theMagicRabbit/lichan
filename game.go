@@ -73,7 +73,7 @@ func GameToPGN(game Game, url string) (string, error) {
 [TimeControl "%s"]
 
 %s
-	`
+`
 	var event string
 	if game.Rated {
 		event = fmt.Sprintf("%s %s game", "rated", game.Speed)
