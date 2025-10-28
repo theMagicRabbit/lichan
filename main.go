@@ -9,7 +9,9 @@ import (
 )
 
 type state struct {
-	config *config.Config
+	Config *config.Config
+	ApiUrl string
+	SiteUrl string
 }
 
 func main() {
@@ -25,11 +27,17 @@ func main() {
 	}
 	
 	state := state{
-		config: config,
+		Config: config,
+		ApiUrl: "https://lichess.org",
+		SiteUrl: "https://lichess.org",
 	}
 
-	err = state.config.CreateDirs()
+	err = state.Config.CreateDirs()
 	if err != nil {
 		log.Fatal(err)
 	}
+	for _, user := range state.Config.Username {
+		state.handlerDownloads(user)
+	}
 }
+
