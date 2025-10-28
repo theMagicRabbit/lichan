@@ -68,6 +68,18 @@ func replaceTilde(p string) (string, error) {
 	return replacementPath, nil
 }
 
+func (C *Config) WriteConfig(configPath string) error {
+	configBytes, err := toml.Marshal(C)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(configPath, configBytes, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (C *Config) CreateDirs() error {
 	for _, user := range C.Username {
 		p := path.Join(C.GameDirectory, user)

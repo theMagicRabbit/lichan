@@ -25,6 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error reading config: %v\n", err)
 	}
+	defer config.WriteConfig(configFile)
 	
 	state := state{
 		Config: config,

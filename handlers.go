@@ -9,7 +9,7 @@ import (
 )
 
 func (s *state) handlerDownloads(username string) error {
-	opts := "opening=true"
+	opts := "opening=true?sort=dateAsc"
 	reqUrl := fmt.Sprintf("%s%s%s?%s", s.ApiUrl, "/api/games/user/", username, opts)
 
 	if s.Config.LastGameTime > 0 {
@@ -50,13 +50,11 @@ func (s *state) handlerDownloads(username string) error {
 	}
 
 	for _, game := range games {
-		gamePGN, err := GameToPGN(game, s.SiteUrl)
+		err := game.WriteGame(s)
 		if err != nil {
-			log.Printf("Error converting game to PGN: %v\n", err)
-			continue
+			return err
 		}
-		fmt.Println("========== GAME ==========")
-		fmt.Println(gamePGN)
+		s.Config.LastGameTime = game.CreatedAt
 	}
 
 	return nil

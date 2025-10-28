@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"strings"
 	"time"
 )
@@ -58,7 +60,26 @@ type Game struct {
 	} `json:"clock"`
 }
 
-func GameToPGN(game Game, url string) (string, error) {
+func (g *Game) WriteGame(s *state) error {
+	gameString, err := GameToPGN(g, s.SiteUrl)
+	if err != nil {
+		return err
+	}
+
+	gameYear, gameMonth, gameDay := time.UnixMilli(g.CreatedAt).Date()
+	gameDate := fmt.Sprintf("%d.%d.%d", gameYear, gameMonth, gameDay)
+
+	fileTitle := fmt.Sprintf("%s_%s.pgn", gameDate, g.ID)
+	gameFilePath := fmt.Sprintf("%s/%s", s.Config.GameDirectory, fileTitle)
+	err = os.WriteFile(gameFilePath, []byte(gameString), 0644)
+	if err != nil {
+		return err
+	}
+	log.Printf("Wrote %s\n", gameFilePath)
+	return nil
+}
+
+func GameToPGN(game *Game, url string) (string, error) {
 	pgnTemplate := `[Event "%s"]
 [Site "%s/%s"]
 [Date "%s"]
