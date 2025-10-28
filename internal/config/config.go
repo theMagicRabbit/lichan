@@ -2,7 +2,6 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -15,6 +14,7 @@ type Config struct {
 	Username      []string `toml:"username"`
 	GameDirectory string   `toml:"game_directory"`
 	PAT           string   `toml:"token"`
+	LastGameTime  int64    `toml:"last_run"`
 }
 
 func ReadConfig(configPath string) (*Config, error) {
