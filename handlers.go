@@ -23,6 +23,7 @@ func (s *state) handlerDownloads(username string) error {
 	}
 
 	req.Header.Add("authorization", fmt.Sprintf("Bearer %s", s.Config.PAT))
+	req.Header.Add("accept", "application/x-ndjson")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
