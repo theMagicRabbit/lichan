@@ -106,7 +106,7 @@ func (s *state) handlerAnalyze(username string) error {
 
 		_, err = GameFromPGN(gamePGNBytes)
 		if err != nil {
-			return  err
+			return err
 		}
 
 	// Convert PGN to Game struct

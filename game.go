@@ -89,10 +89,11 @@ func GameFromPGN(data []byte) (Game, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 	scanner.Split(tokenizerPGN)
 
-	for scanner.Scan() {
-		fmt.Println(scanner.Text())
-	}
 	game := Game{}
+	for scanner.Scan() {
+		key := scanner.Text()
+		fmt.Println(key)
+	}
 	return game, nil
 }
 
@@ -100,10 +101,11 @@ func tokenizerPGN(data []byte, atEOF bool) (advance int, token []byte, err error
 	if atEOF && len(data) == 0 {
 		return
 	}
-	for advance = 1; advance < len(data); advance++ {
-		nextByte := string(data[advance])
+	for i := 0; i < len(data); i++ {
+		advance++
+		nextByte := string(data[i])
 		if nextByte == "[" || nextByte == "]" {
-			token = append(token, data[advance])
+			token = append(token, data[i])
 			break
 		}
 
@@ -115,7 +117,7 @@ func tokenizerPGN(data []byte, atEOF bool) (advance int, token []byte, err error
 			continue
 		}
 
-		token = append(token, data[advance])
+		token = append(token, data[i])
 	}
 	if len(token) > 0 && string(token[0]) == "\"" {
 		err = errors.New("Malformed PGN: Unmatch quotation mark")
