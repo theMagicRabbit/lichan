@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -89,10 +90,104 @@ func GameFromPGN(data []byte) (Game, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 	scanner.Split(tokenizerPGN)
 
+	valuesMap := make(map[string]string)
 	game := Game{}
 	for scanner.Scan() {
-		key := scanner.Text()
-		fmt.Println(key)
+		key := strings.ToLower(strings.TrimSpace(scanner.Text()))
+		if key == "[" || key == "]" {
+			continue
+		}
+		if scanner.Scan() {
+			val := strings.TrimSpace(scanner.Text())
+			if val == "]" {
+				fmt.Printf("missing value for key: %s\n", key)
+				break
+			}
+			valuesMap[key] = val
+		}
+	}
+
+	for key, val := range valuesMap {
+		switch key {
+		case "event":
+			words := strings.Split(val, " ")
+			if len(words) == 3 {
+				game.Rated = strings.ToLower(words[0]) == "rated"
+				game.Speed = strings.ToLower(words[1])
+			}
+		case "site":
+		// Derivied value, not needed
+		case "date":
+			dateStrings := strings.Split(val, ".")
+			if len(dateStrings) == 3 {
+				year, err := strconv.Atoi(dateStrings[0])
+				if err != nil {
+					log.Printf("Unable to parse date as int: %v\n", err)
+					break
+				}
+				month, err := strconv.Atoi(dateStrings[1])
+				if err != nil {
+					log.Printf("Unable to parse date as int: %v\n", err)
+					break
+				}
+				day, err := strconv.Atoi(dateStrings[2])
+				if err != nil {
+					log.Printf("Unable to parse date as int: %v\n", err)
+					break
+				}
+				game.CreatedAt = time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC).UnixMilli()
+			}
+		case "white":
+			game.Players.White.User.Name = strings.TrimSpace(val)
+		case "black":
+			game.Players.Black.User.Name = strings.TrimSpace(val)
+		case "result":
+			result := GameResult(strings.TrimSpace(val))
+			switch result {
+			case BlackWins:
+				game.Winner = "black"
+			case WhiteWins:
+				game.Winner = "white"
+			case Draw:
+				game.Winner = "draw"
+			default:
+			}
+		case "gameid":
+			game.ID = strings.TrimSpace(val)
+		case "opening":
+			game.Opening.Name = strings.TrimSpace(val)
+		case "whiteelo":
+			elo, err := strconv.Atoi(val)
+			if err != nil {
+				log.Printf("Could not parse rating as int: %v\n", err)
+				break
+			}
+			game.Players.White.Rating = elo
+		case "blackelo":
+			elo, err := strconv.Atoi(val)
+			if err != nil {
+				log.Printf("Could not parse rating as int: %v\n", err)
+				break
+			}
+			game.Players.Black.Rating = elo
+		case "timecontrol":
+			timeStrings := strings.Split(val, "+")
+			if len(timeStrings) == 2 {
+				initial, err := strconv.Atoi(strings.TrimSpace(timeStrings[0]))
+				if err != nil {
+					log.Printf("Could not parse time control: %v\n", err)
+					break
+				}
+				increment, err := strconv.Atoi(strings.TrimSpace(timeStrings[1]))
+				if err != nil {
+					log.Printf("Could not parse time control: %v\n", err)
+					break
+				}
+				game.Clock.Initial = initial
+				game.Clock.Increment = increment
+			}
+		default:
+		}
 	}
 	return game, nil
 }
