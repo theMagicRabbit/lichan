@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -77,6 +80,58 @@ func (g *Game) WriteGame(s *state, outputDir string) error {
 	}
 	log.Printf("Wrote %s\n", gameFilePath)
 	return nil
+}
+
+func GameFromPGN(data []byte) (Game, error) {
+	if bytes.ContainsAny(data, "\t") {
+		return Game{}, errors.New("PGN format must not contain any tabs")
+	}
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+	scanner.Split(tokenizerPGN)
+
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+	}
+	game := Game{}
+	return game, nil
+}
+
+func tokenizerPGN(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return
+	}
+	for advance = 1; advance < len(data); advance++ {
+		nextByte := string(data[advance])
+		if nextByte == "[" || nextByte == "]" {
+			token = append(token, data[advance])
+			break
+		}
+
+		if nextByte == "\"" {
+			if len(token) > 0 && string(token[0]) == "\"" {
+				token = token[1:]
+				break
+			} else {
+				token = append(token, data[advance])
+				continue
+			}
+		}
+		
+		if nextByte == " " && string(token[0]) != "\"" {
+			// Spaces that do not follow a double quote mark are skipped
+			continue
+		}
+
+		if nextByte == "\n" {
+			continue
+		}
+
+		token = append(token, data[advance])
+	}
+	if string(token[0]) == "\"" {
+		err = errors.New("Malformed PGN: Unmatch quotation mark")
+	}
+	return
 }
 
 func GameToPGN(game *Game, url string) (string, error) {
