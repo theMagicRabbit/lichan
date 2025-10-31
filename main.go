@@ -39,6 +39,7 @@ func main() {
 	}
 	for _, user := range state.Config.Username {
 		state.handlerDownloads(user)
+		state.handlerAnalyze(user)
 	}
 }
 
