@@ -13,6 +13,7 @@ import (
 type Config struct {
 	Username      []string `toml:"username"`
 	GameDirectory string   `toml:"game_directory"`
+	EngineDirectory string `toml:"engine_directory"`
 	PAT           string   `toml:"token"`
 	LastGameTime  int64    `toml:"last_run"`
 }
