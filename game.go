@@ -83,9 +83,9 @@ func (g *Game) WriteGame(s *state, outputDir string) error {
 	return nil
 }
 
-func GameFromPGN(data []byte) (Game, error) {
+func GameFromPGN(data []byte) (*Game, error) {
 	if bytes.ContainsAny(data, "\t") {
-		return Game{}, errors.New("PGN format must not contain any tabs")
+		return &Game{}, errors.New("PGN format must not contain any tabs")
 	}
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 	scanner.Split(tokenizerPGN)
@@ -189,7 +189,7 @@ func GameFromPGN(data []byte) (Game, error) {
 		default:
 		}
 	}
-	return game, nil
+	return &game, nil
 }
 
 func tokenizerPGN(data []byte, atEOF bool) (advance int, token []byte, err error) {
