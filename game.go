@@ -108,27 +108,16 @@ func tokenizerPGN(data []byte, atEOF bool) (advance int, token []byte, err error
 		}
 
 		if nextByte == "\"" {
-			if len(token) > 0 && string(token[0]) == "\"" {
-				token = token[1:]
-				break
-			} else {
-				token = append(token, data[advance])
-				continue
-			}
+			break
 		}
 		
-		if nextByte == " " && string(token[0]) != "\"" {
-			// Spaces that do not follow a double quote mark are skipped
-			continue
-		}
-
 		if nextByte == "\n" {
 			continue
 		}
 
 		token = append(token, data[advance])
 	}
-	if string(token[0]) == "\"" {
+	if len(token) > 0 && string(token[0]) == "\"" {
 		err = errors.New("Malformed PGN: Unmatch quotation mark")
 	}
 	return
