@@ -104,6 +104,8 @@ func GameFromPGN(data []byte) (*Game, error) {
 				break
 			}
 			valuesMap[key] = val
+		} else {
+			fmt.Println(key)
 		}
 	}
 
@@ -277,6 +279,7 @@ func GameToPGN(game *Game, url string) (string, error) {
 		}
 		whiteMove = !whiteMove
 	}
+	moveString = fmt.Sprintf("%s %s", moveString, result)
 
 
 	gamePGN := fmt.Sprintf(pgnTemplate,
