@@ -104,10 +104,11 @@ func (s *state) handlerAnalyze(username string) error {
 			continue
 		}
 
-		_, err = GameFromPGN(gamePGNBytes)
+		game, err := GameFromPGN(gamePGNBytes)
 		if err != nil {
 			return err
 		}
+		fmt.Println(*game)
 
 	// Convert PGN to Game struct
 	// Feed game to stockfish while processing results

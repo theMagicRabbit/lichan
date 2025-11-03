@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +20,13 @@ const (
 	Draw      GameResult = "1/2-1/2"
 	Unknown   GameResult = "*"
 )
+
+var IsValidGameResult = map[GameResult]struct{} {
+	WhiteWins: {},
+	BlackWins: {},
+	Draw: {},
+	Unknown: {},
+}
 
 type Game struct {
 	ID         string `json:"id"`
@@ -105,7 +113,7 @@ func GameFromPGN(data []byte) (*Game, error) {
 			}
 			valuesMap[key] = val
 		} else {
-			fmt.Println(key)
+			valuesMap["moves"] = key // Key is probably the wrong name for the variable
 		}
 	}
 
@@ -188,6 +196,23 @@ func GameFromPGN(data []byte) (*Game, error) {
 				game.Clock.Initial = initial
 				game.Clock.Increment = increment
 			}
+		case "moves":
+			moveNumberRE, err := regexp.Compile(`^\d+\.$`)
+			if err != nil {
+				log.Printf("Bad regexp: %v\n", err)
+				break
+			}
+			var gameMoves string
+			for _, token := range strings.Split(val, " ") {
+				if moveNumberRE.MatchString(token) {
+					continue
+				}
+				if _, ok := IsValidGameResult[GameResult(token)]; ok {
+					continue
+				}
+				gameMoves = fmt.Sprintf("%s %s", gameMoves, token)
+			}
+			game.Moves = strings.TrimSpace(gameMoves)
 		default:
 		}
 	}
