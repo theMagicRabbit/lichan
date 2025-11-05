@@ -108,7 +108,15 @@ func (s *state) handlerAnalyze(username string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(*game)
+
+		for ms := range strings.SplitSeq(game.Moves, " ") {
+			move, err := ParseMoveString(ms)
+			if err != nil {
+				log.Printf("Unable to parse move: %v\n", err)
+				break
+			}
+			fmt.Println(*move)
+		}
 
 	// Feed game to stockfish while processing results
 	// Write output to processed file
