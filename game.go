@@ -13,6 +13,41 @@ import (
 	"time"
 )
 
+type PlayerColor int
+const (
+	White PlayerColor = iota
+	Black 
+)
+
+type PieceType int
+const (
+	King PieceType = iota
+	Queen
+	Rook
+	Bishop
+	Knight
+	Pawn
+)
+
+type piece struct {
+	PieceType PieceType
+	PlayerColor PlayerColor
+	Square string
+}
+
+type GameState struct {
+	PlayerTurn PlayerColor
+	Pieces []piece
+}
+
+type Move struct {
+	PieceType, PromoteTo PieceType
+	Target, Discriminator string
+	IsCheck, IsCheckmate,
+	IsCapture, IsLongCastle,
+	IsShortCastle bool
+}
+
 type GameResult string
 const (
 	WhiteWins GameResult = "1-0"
@@ -323,4 +358,34 @@ func GameToPGN(game *Game, url string) (string, error) {
 				moveString,
 	)
 	return gamePGN, nil
+}
+
+func ParseMoveString(ms string) (move *Move, err error) {
+	switch p := ms[0]; string(p) {
+	case "K":
+		move.PieceType = King
+	case "Q":
+		move.PieceType = Queen
+	case "B":
+		move.PieceType = Bishop
+	case "R":
+		move.PieceType = Rook
+	case "N":
+		move.PieceType = Knight
+	default:
+		move.PieceType = Pawn
+	}
+	return
+}
+
+func (GS *GameState) ApplyMove(move string, turn PlayerColor) (*GameState, error) {
+	for _, boardPiece := range GS.Pieces {
+		if boardPiece.PlayerColor != turn {
+			continue
+		}
+		if boardPiece.PieceType != pieceType {
+			continue
+		}
+	}
+	
 }

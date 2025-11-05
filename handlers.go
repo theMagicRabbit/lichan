@@ -110,7 +110,6 @@ func (s *state) handlerAnalyze(username string) error {
 		}
 		fmt.Println(*game)
 
-	// Convert PGN to Game struct
 	// Feed game to stockfish while processing results
 	// Write output to processed file
 	}
