@@ -8,10 +8,20 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 )
+var rankTokens []string = []string{"a", "b", "c", "d", "e", "f", "g", "h"}
+var fileTokens []string = []string{"1", "2", "3", "4", "5", "6", "7", "8"}
+var pieceTokens []string = []string{"K", "Q", "R", "B", "N"}
+var longCastle string = "O-O-O"
+var shortCastle string = "O-O"
+var check string = "+"
+var mate string = "#"
+var capture string = "x"
+var promote string = "="
 
 type PlayerColor int
 const (
@@ -19,14 +29,14 @@ const (
 	Black 
 )
 
-type PieceType int
+type PieceType string
 const (
-	King PieceType = iota
-	Queen
-	Rook
-	Bishop
-	Knight
-	Pawn
+	King PieceType = "K"
+	Queen PieceType = "Q"
+	Rook PieceType = "R"
+	Bishop PieceType = "B"
+	Knight PieceType = "N"
+	Pawn PieceType = ""
 )
 
 type piece struct {
@@ -254,6 +264,68 @@ func GameFromPGN(data []byte) (*Game, error) {
 	return &game, nil
 }
 
+func tokenizerMoveString(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return
+	}
+	if len(data) >= len(longCastle) && string(data[:4]) == longCastle {
+		token = data[:4]
+		advance = len(longCastle)
+		return
+	}
+
+	if len(data) >= len(shortCastle) && string(data[:2]) == shortCastle {
+		token = data[:2]
+		advance = len(shortCastle)
+		return
+	}
+
+	if slices.Contains(pieceTokens, string(data[0])) {
+		advance++
+		token = append(token, data[0])
+		return
+	}
+
+	if len(data) == 1 {
+		token = data
+		advance++
+		switch t := string(data); t {
+		case check, mate:
+		default:
+			err = errors.New("Unknown symbol")
+		}
+		return
+	}
+
+	if slices.Contains(rankTokens, string(data[0])) {
+		token = append(token, data[0])
+		advance++
+		return
+	}
+
+	if slices.Contains(fileTokens, string(data[0])) {
+		token = append(token, data[0])
+		advance++
+		if slices.Contains(rankTokens, string(data[1])) {
+			token = append(token, data[1])
+			advance++
+		}
+		return
+	}
+
+	if string(data[0]) == capture {
+		token = append(token, data[0])
+		advance++
+		return
+	}
+	if string(data[0]) == promote {
+		token = append(token, data[0])
+		advance++
+		return
+	}
+	return
+}
+
 func tokenizerPGN(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if atEOF && len(data) == 0 {
 		return
@@ -361,7 +433,27 @@ func GameToPGN(game *Game, url string) (string, error) {
 }
 
 func ParseMoveString(ms string) (move *Move, err error) {
-	switch p := ms[0]; string(p) {
+	discriminatorRE, err := regexp.Compile(`[a-h]?[1-8]?`)
+	if err != nil {
+		return
+	}
+	squareRE, err := regexp.Compile(`[a-h][1-8]`)
+	if err != nil {
+		return
+	}
+	scanner := bufio.NewScanner(strings.NewReader(strings.TrimSpace(ms)))
+	scanner.Split(tokenizerMoveString)
+	var tokens []string
+	for scanner.Scan() {
+		tokens = append(tokens, scanner.Text())
+	}
+	if len(tokens) < 1 {
+		err = errors.New("No tokens found in string")
+		return
+	}
+
+	move = &Move{}
+	switch tokens[0] {
 	case "K":
 		move.PieceType = King
 	case "Q":
@@ -375,17 +467,67 @@ func ParseMoveString(ms string) (move *Move, err error) {
 	default:
 		move.PieceType = Pawn
 	}
+	var i int
+	if move.PieceType == Pawn {
+		i = 0
+	} else {
+		i = 1
+	}
+
+	for ; i < len(tokens); i++ {
+		t := tokens[i]
+		if squareRE.MatchString(t) || discriminatorRE.MatchString(t) {
+			if move.Target != "" {
+				move.Discriminator = move.Target
+			}
+			move.Target = t
+			continue
+		}
+		switch t {
+		case longCastle:
+			move.IsLongCastle = true
+		case shortCastle:
+			move.IsShortCastle = true
+		case capture:
+			move.IsCapture = true
+		case check:
+			move.IsCheck = true
+		case mate:
+			move.IsCheckmate = true
+		case promote:
+			if move.PromoteTo != Pawn {
+				err = errors.New("Promotion indicated on non-pawn piece")
+				return
+			}
+			i++
+			if i >= len(tokens) {
+				// Ensure we don't have a slice out of range error
+				err = errors.New("Promotion indicated with no piece type provided")
+				return
+			}
+			promotePiece := tokens[i]
+			if !slices.Contains(pieceTokens, promotePiece) {
+				err = errors.New("Promotion indicated with no piece type provided")
+				return
+			}
+			if promotePiece == "" {
+				err = errors.New("Cannot promote pawn to pawn")
+				return
+			}
+			move.PromoteTo = PieceType(promotePiece)
+		}
+	}
 	return
 }
 
-func (GS *GameState) ApplyMove(move string, turn PlayerColor) (*GameState, error) {
-	for _, boardPiece := range GS.Pieces {
-		if boardPiece.PlayerColor != turn {
-			continue
-		}
-		if boardPiece.PieceType != pieceType {
-			continue
-		}
-	}
-	
-}
+//func (GS *GameState) ApplyMove(move string, turn PlayerColor) (*GameState, error) {
+//	for _, boardPiece := range GS.Pieces {
+////		if boardPiece.PlayerColor != turn {
+//			continue
+//		}
+////		if boardPiece.PieceType != pieceType {
+//			continue
+////		}
+//	}
+//	
+//}
