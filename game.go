@@ -268,14 +268,14 @@ func tokenizerMoveString(data []byte, atEOF bool) (advance int, token []byte, er
 	if atEOF && len(data) == 0 {
 		return
 	}
-	if len(data) >= len(longCastle) && string(data[:4]) == longCastle {
-		token = data[:4]
+	if len(data) >= len(longCastle) && string(data[:len(longCastle)]) == longCastle {
+		token = slices.Concat(token, data[:len(longCastle)])
 		advance = len(longCastle)
 		return
 	}
 
-	if len(data) >= len(shortCastle) && string(data[:2]) == shortCastle {
-		token = data[:2]
+	if len(data) >= len(shortCastle) && string(data[:len(shortCastle)]) == shortCastle {
+		token = data[:len(shortCastle)]
 		advance = len(shortCastle)
 		return
 	}
@@ -515,6 +515,8 @@ func ParseMoveString(ms string) (move *Move, err error) {
 				return
 			}
 			move.PromoteTo = PieceType(promotePiece)
+		default:
+			err = errors.New("Unknown token")
 		}
 	}
 	return
