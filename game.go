@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 )
-var rankTokens []string = []string{"a", "b", "c", "d", "e", "f", "g", "h"}
-var fileTokens []string = []string{"1", "2", "3", "4", "5", "6", "7", "8"}
+var fileTokens []string = []string{"a", "b", "c", "d", "e", "f", "g", "h"}
+var rankTokens []string = []string{"1", "2", "3", "4", "5", "6", "7", "8"}
 var pieceTokens []string = []string{"K", "Q", "R", "B", "N"}
 var longCastle string = "O-O-O"
 var shortCastle string = "O-O"
