@@ -248,7 +248,7 @@ func GameFromPGN(data []byte) (*Game, error) {
 				break
 			}
 			var gameMoves string
-			for _, token := range strings.Split(val, " ") {
+			for token := range strings.SplitSeq(val, " ") {
 				if moveNumberRE.MatchString(token) {
 					continue
 				}
@@ -433,11 +433,11 @@ func GameToPGN(game *Game, url string) (string, error) {
 }
 
 func ParseMoveString(ms string) (move *Move, err error) {
-	discriminatorRE, err := regexp.Compile(`[a-h]?[1-8]?`)
+	discriminatorRE, err := regexp.Compile(`^[a-h]?[1-8]?$`)
 	if err != nil {
 		return
 	}
-	squareRE, err := regexp.Compile(`[a-h][1-8]`)
+	squareRE, err := regexp.Compile(`^[a-h][1-8]$`)
 	if err != nil {
 		return
 	}
@@ -485,8 +485,10 @@ func ParseMoveString(ms string) (move *Move, err error) {
 		}
 		switch t {
 		case longCastle:
+			move.Target = t
 			move.IsLongCastle = true
 		case shortCastle:
+			move.Target = t
 			move.IsShortCastle = true
 		case capture:
 			move.IsCapture = true
