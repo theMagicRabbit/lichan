@@ -448,7 +448,7 @@ func ParseMoveString(ms string) (move *Move, err error) {
 		tokens = append(tokens, scanner.Text())
 	}
 	if len(tokens) < 1 {
-		err = errors.New("No tokens found in string")
+		err = fmt.Errorf("No tokens found in string: %v\n", ms)
 		return
 	}
 
