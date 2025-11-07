@@ -67,6 +67,25 @@ func TestParseMoveString(t *testing.T) {
 			},
 			E: nil,
 		},
+		{
+			Input: "Qxe5",
+			Expected: Move{
+				Target: "e5",
+				IsCapture: true,
+				PieceType: Queen,
+			},
+			E: nil,
+		},
+		{
+			Input: "dxe5",
+			Expected: Move{
+				Target: "e5",
+				IsCapture: true,
+				PieceType: Pawn,
+				Discriminator: "d",
+			},
+			E: nil,
+		},
 	}
 	for _, test := range tests {
 		result, err := ParseMoveString(test.Input)
