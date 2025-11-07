@@ -146,7 +146,9 @@ func GameFromPGN(data []byte) (*Game, error) {
 	valuesMap := make(map[string]string)
 	game := Game{}
 	for scanner.Scan() {
-		key := strings.ToLower(strings.TrimSpace(scanner.Text()))
+		// Move strings should not be lower case, but PGN keys should be for matching
+		cleanKey := strings.TrimSpace(scanner.Text())
+		key := strings.ToLower(cleanKey)
 		if key == "[" || key == "]" {
 			continue
 		}
@@ -158,7 +160,11 @@ func GameFromPGN(data []byte) (*Game, error) {
 			}
 			valuesMap[key] = val
 		} else {
-			valuesMap["moves"] = key // Key is probably the wrong name for the variable
+			// If none of the keys match, then it is assumed this is the move string.
+			// This assumption seems likely to be wrong in edge cases. As of now, I don't
+			// have an assertive way of identifying a move string.
+			// Assuming move strings has caused this many bugs: 1
+			valuesMap["moves"] = cleanKey
 		}
 	}
 
