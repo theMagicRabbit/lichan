@@ -23,6 +23,9 @@ var mate string = "#"
 var capture string = "x"
 var promote string = "="
 
+var discriminatorRE = regexp.MustCompile(`^[a-h]?[1-8]?$`)
+var squareRE = regexp.MustCompile(`^[a-h][1-8]$`)
+
 type PlayerColor int
 const (
 	White PlayerColor = iota
@@ -38,7 +41,14 @@ const (
 	Knight PieceType = "N"
 	Pawn PieceType = ""
 )
-
+var IsValidPieceType = map[PieceType]struct{} {
+	King: {},
+	Queen: {},
+	Rook: {},
+	Bishop: {},
+	Knight: {},
+	Pawn: {},
+}
 type piece struct {
 	PieceType PieceType
 	PlayerColor PlayerColor
@@ -439,14 +449,6 @@ func GameToPGN(game *Game, url string) (string, error) {
 }
 
 func ParseMoveString(ms string) (move *Move, err error) {
-	discriminatorRE, err := regexp.Compile(`^[a-h]?[1-8]?$`)
-	if err != nil {
-		return
-	}
-	squareRE, err := regexp.Compile(`^[a-h][1-8]$`)
-	if err != nil {
-		return
-	}
 	scanner := bufio.NewScanner(strings.NewReader(strings.TrimSpace(ms)))
 	scanner.Split(tokenizerMoveString)
 	var tokens []string
