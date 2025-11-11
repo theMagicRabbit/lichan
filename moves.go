@@ -6,90 +6,10 @@ import (
 	"strings"
 )
 
-type Rank struct {
-	Name string
-	Number int
-}
-
-type File struct {
-	Name string
-	Number int
-}
-
-var Ranks = []Rank{
-	{
-		Name: "1",
-		Number: 0,
-	},
-	{
-		Name: "2",
-		Number: 1,
-	},
-	{
-		Name: "3",
-		Number: 4,
-	},
-	{
-		Name: "4",
-		Number: 3,
-	},
-	{
-		Name: "5",
-		Number: 4,
-	},
-	{
-		Name: "6",
-		Number: 5,
-	},
-	{
-		Name: "7",
-		Number: 6,
-	},
-	{
-		Name: "8",
-		Number: 7,
-	},
-}
-
-var Files = []File{
-	{
-		Name: "a",
-		Number: 0,
-	},
-	{
-		Name: "b",
-		Number: 1,
-	},
-	{
-		Name: "c",
-		Number: 4,
-	},
-	{
-		Name: "d",
-		Number: 3,
-	},
-	{
-		Name: "e",
-		Number: 4,
-	},
-	{
-		Name: "f",
-		Number: 5,
-	},
-	{
-		Name: "g",
-		Number: 6,
-	},
-	{
-		Name: "h",
-		Number: 7,
-	},
-}
-
-func (gs *GameState) ApplyMove(ms string, turn PlayerColor) (*GameState, error) {
+func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (*GameState, string, error) {
 	move, err := ParseMoveString(strings.TrimSpace(ms))
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	var sourceSquare string
@@ -107,7 +27,7 @@ func (gs *GameState) ApplyMove(ms string, turn PlayerColor) (*GameState, error) 
 				continue
 			}
 			if isValid, err := gs.isValidMove(move, boardPiece); err != nil {
-				return nil, err
+				return nil, "", err
 			} else if !isValid {
 				continue
 			}
@@ -137,7 +57,7 @@ func (gs *GameState) ApplyMove(ms string, turn PlayerColor) (*GameState, error) 
 		if _, targetExists := nextState.Pieces[move.Target]; targetExists {
 			delete(nextState.Pieces, move.Target)
 		} else if movedPiece.PieceType != Pawn {
-			return nil, fmt.Errorf("No piece found on target square: %v\n", move.Target)
+			return nil,"", fmt.Errorf("No piece found on target square: %v\n", move.Target)
 		} else {
 			targetRank, targetFile := rune(move.Target[1]), rune(move.Target[0])
 			if turn == Black {
@@ -149,7 +69,7 @@ func (gs *GameState) ApplyMove(ms string, turn PlayerColor) (*GameState, error) 
 			if targetPawn, exists := nextState.Pieces[enPassantSquare]; exists && targetPawn.PieceType == Pawn {
 				delete(nextState.Pieces, enPassantSquare)
 			} else {
-				return nil, fmt.Errorf("Invalid capture to %v attempted\n", move.Target)
+				return nil, "", fmt.Errorf("Invalid capture to %v attempted\n", move.Target)
 			}
 		}
 	}
@@ -190,7 +110,7 @@ func (gs *GameState) ApplyMove(ms string, turn PlayerColor) (*GameState, error) 
 	nextState.Pieces[move.Target] = movedPiece
 	delete(nextState.Pieces, sourceSquare)
 
-	return &nextState, nil
+	return &nextState, sourceSquare+move.Target, nil
 }
 
 func (gs *GameState) isValidMove(move *Move, p piece) (isValid bool, err error) {
