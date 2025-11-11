@@ -57,7 +57,7 @@ type piece struct {
 
 type GameState struct {
 	PlayerTurn PlayerColor
-	Pieces []piece
+	Pieces map[string]piece
 }
 
 type Move struct {

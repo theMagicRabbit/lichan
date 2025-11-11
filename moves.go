@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -107,12 +108,15 @@ func (GS *GameState) ApplyMove(ms string, turn PlayerColor) (*GameState, error) 
 	return nil, nil
 }
 
-func isValidMove(move Move, p piece, ) (isValid bool, err error) {
-
+func (gs *GameState) isValidMove(move Move, p piece) (isValid bool, err error) {
+	squares, err := gs.calculatePossibleMoves(p)
+	isValid = slices.Contains(squares, move.Target)
 	return
 }
 
-func calculatePossibleMoves(p piece, gs *GameState) (squares []string, err error) {
+func (gs *GameState) calculatePossibleMoves(p piece) (squares []string, err error) {
+	rank := rune(p.Square[1])
+	file := rune(p.Square[0])
 	square := p.Square
 	if !squareRE.MatchString(square) {
 		err = fmt.Errorf("Not a valid square: %v\n", square)
@@ -122,22 +126,22 @@ func calculatePossibleMoves(p piece, gs *GameState) (squares []string, err error
 		err = fmt.Errorf("Not a valid piece: %v\n", p.PieceType)
 		return
 	}
-	var calcFunc func(string)([]string)
+	var calcFunc func(rune, rune, piece)([]string)
 	switch p.PieceType {
 	case King:
-		calcFunc = calcKingMoves
+		//calcFunc = calcKingMoves
 	case Queen:
-		calcFunc = calcQueenMoves
+	//	calcFunc = calcQueenMoves
 	case Rook:
-		calcFunc = calcRookMoves
+		calcFunc = gs.calcRookMoves
 	case Bishop:
-		calcFunc = calcBishopMoves
+	//	calcFunc = calcBishopMoves
 	case Knight:
-		calcFunc = calcKnightMoves
+	//	calcFunc = calcKnightMoves
 	case Pawn:
-		calcFunc = calcPawnMoves
+	//	calcFunc = calcPawnMoves
 	}
-	squares = calcFunc(square)
+	squares = calcFunc(rank, file, p)
 	return
 }
 
@@ -149,22 +153,54 @@ func calcQueenMoves(square string) (squares []string) {
 	return
 }
 
-func calcRookMoves(square string) (squares []string) {
-	file := string(square[0])
-	rank := string(square[1])
-	for _, r := range rankTokens {
-		squareCandiate := file + r
-		if squareCandiate == square {
+func (gs *GameState) calcRookMoves(rank, file rune, p piece) (squares []string) {
+	for r := rank + 1; r <= '8'; r++ {
+		canidateSquare := string(file) + string(r)
+		if canidateSquare == p.Square {
 			continue
 		}
-		squares = append(squares, squareCandiate)
+		if otherPiece, ok := gs.Pieces[canidateSquare]; ok {
+			if otherPiece.PlayerColor != p.PlayerColor {
+				squares = append(squares, canidateSquare)
+			}
+			break
+		}
 	}
-	for _, f := range fileTokens {
-		squareCandiate := f + rank
-		if squareCandiate == square {
+	for r := rank - 1; r >= '1'; r-- {
+		canidateSquare := string(file) + string(r)
+		if canidateSquare == p.Square {
 			continue
 		}
-		squares = append(squares, squareCandiate)
+		if otherPiece, ok := gs.Pieces[canidateSquare]; ok {
+			if otherPiece.PlayerColor != p.PlayerColor {
+				squares = append(squares, canidateSquare)
+			}
+			break
+		}
+	}
+	for f := file - 1; f >= 'a'; f-- {
+		canidateSquare := string(f) + string(rank)
+		if canidateSquare == p.Square {
+			continue
+		}
+		if otherPiece, ok := gs.Pieces[canidateSquare]; ok {
+			if otherPiece.PlayerColor != p.PlayerColor {
+				squares = append(squares, canidateSquare)
+			}
+			break
+		}
+	}
+	for f := file + 1; f <= 'h'; f++ {
+		canidateSquare := string(f) + string(rank)
+		if canidateSquare == p.Square {
+			continue
+		}
+		if otherPiece, ok := gs.Pieces[canidateSquare]; ok {
+			if otherPiece.PlayerColor != p.PlayerColor {
+				squares = append(squares, canidateSquare)
+			}
+			break
+		}
 	}
 	return
 }
