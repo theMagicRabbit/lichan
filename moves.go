@@ -149,7 +149,9 @@ func calcKingMoves(square string) (squares []string) {
 	return
 }
 
-func calcQueenMoves(square string) (squares []string) {
+func (gs *GameState) calcQueenMoves(rank, file rune, p piece) (squares []string) {
+	squares = append(squares, gs.calcRookMoves(rank, file, p)...)
+	squares = append(squares, gs.calcBishopMoves(rank, file, p)...)
 	return
 }
 
