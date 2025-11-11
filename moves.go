@@ -86,20 +86,20 @@ var Files = []File{
 	},
 }
 
-func (GS *GameState) ApplyMove(ms string, turn PlayerColor) (*GameState, error) {
+func (gs *GameState) ApplyMove(ms string, turn PlayerColor) (*GameState, error) {
 	move, err := ParseMoveString(strings.TrimSpace(ms))
 	if err != nil {
 		return nil, err
 	}
 
-	for _, boardPiece := range GS.Pieces {
+	for _, boardPiece := range gs.Pieces {
 		if boardPiece.PlayerColor != turn {
 			continue
 		}
 		if boardPiece.PieceType != move.PieceType {
 			continue
 		}
-		possibleMoves, err := calculatePossibleMoves(boardPiece, GS)
+		possibleMoves, err := gs.calculatePossibleMoves(boardPiece)
 		if err != nil {
 			return nil, err
 		}
@@ -129,7 +129,7 @@ func (gs *GameState) calculatePossibleMoves(p piece) (squares []string, err erro
 	var calcFunc func(rune, rune, piece)([]string)
 	switch p.PieceType {
 	case King:
-		//calcFunc = calcKingMoves
+		calcFunc = gs.calcKingMoves
 	case Queen:
 		calcFunc = gs.calcQueenMoves
 	case Rook:
@@ -139,13 +139,106 @@ func (gs *GameState) calculatePossibleMoves(p piece) (squares []string, err erro
 	case Knight:
 		calcFunc = gs.calcKnightMoves
 	case Pawn:
-	//	calcFunc = calcPawnMoves
+		calcFunc = gs.calcPawnMoves
 	}
 	squares = calcFunc(rank, file, p)
 	return
 }
 
-func calcKingMoves(square string) (squares []string) {
+func (gs *GameState) calcKingMoves(rank, file rune, p piece) (squares []string) {
+	upRank := rank+1
+	downRank := rank-1
+	leftFile := file-1
+	rightFile := file+1
+	canMoveUp := upRank <= '8'
+	canMoveDown := downRank >= '1'
+	canMoveLeft := leftFile >= 'a'
+	canMoveRight := rightFile <= 'h'
+
+	if canMoveUp {
+		upSquare, isValid := gs.checkGameSquare(upRank, file, p)
+		if isValid {
+			squares = append(squares, upSquare)
+		}
+		if canMoveLeft {
+			upLeftSquare, isValid := gs.checkGameSquare(upRank, leftFile, p)
+			if isValid {
+				squares = append(squares, upLeftSquare)
+			}
+		}
+		if canMoveRight {
+			upRightSquare, isValid := gs.checkGameSquare(upRank, rightFile, p)
+			if isValid {
+				squares = append(squares, upRightSquare)
+			}
+		}
+	}
+	if canMoveDown {
+		downSquare, isValid := gs.checkGameSquare(downRank, file, p)
+		if isValid {
+			squares = append(squares, downSquare)
+		}
+		if canMoveLeft {
+			leftSquare, isValid := gs.checkGameSquare(downRank, leftFile, p)
+			if isValid {
+				squares = append(squares, leftSquare)
+			}
+		}
+		if canMoveRight {
+			rightSquare, isValid := gs.checkGameSquare(downRank, rightFile, p)
+			if isValid {
+				squares = append(squares, rightSquare)
+			}
+		}
+	}
+	if canMoveLeft {
+		leftSquare, isValid := gs.checkGameSquare(rank, leftFile, p)
+		if isValid {
+			squares = append(squares, leftSquare)
+		}
+	}
+	if canMoveRight {
+		rightSquare, isValid := gs.checkGameSquare(rank, rightFile, p)
+		if isValid {
+			squares = append(squares, rightSquare)
+		}
+	}
+
+	var startingSquare string
+	if p.PlayerColor == Black {
+		startingSquare = "e8"
+	} else {
+		startingSquare = "e1"
+	}
+	if p.Square == startingSquare {
+		kingRookSquare := string(file+3)+string(rank)
+		if otherPiece, ok := gs.Pieces[kingRookSquare]; ok &&
+			otherPiece.PieceType == Rook &&
+			otherPiece.PlayerColor == p.PlayerColor {
+				kingBishopSquare := string(file+1)+string(rank)
+				kingKnightSquare := string(file+2)+string(rank)
+				_, knightSquareOccupied := gs.Pieces[kingKnightSquare]
+				_, bishopSquareOccupied := gs.Pieces[kingBishopSquare]
+				if !bishopSquareOccupied && !knightSquareOccupied {
+					squares = append(squares, kingKnightSquare)
+				}
+
+		}
+		queenRookSquare := string(file-4)+string(rank)
+		if otherPiece, ok := gs.Pieces[queenRookSquare]; ok &&
+			otherPiece.PieceType == Rook &&
+			otherPiece.PlayerColor == p.PlayerColor {
+				queenBishopSquare := string(file-2)+string(rank)
+				queenKnightSquare := string(file-3)+string(rank)
+				queenSquare := string(file-1)+string(rank)
+				_, knightSquareOccupied := gs.Pieces[queenKnightSquare]
+				_, bishopSquareOccupied := gs.Pieces[queenBishopSquare]
+				_, queenSquareOccupied := gs.Pieces[queenSquare]
+				if !bishopSquareOccupied && !knightSquareOccupied && !queenSquareOccupied {
+					squares = append(squares, queenBishopSquare)
+				}
+		}
+	}
 	return
 }
 
@@ -275,7 +368,113 @@ func (gs *GameState) calcKnightMoves(rank, file rune, p piece) (squares []string
 	return
 }
 
-func calcPawnMoves(square string) (squares []string) {
+func (gs *GameState) calcPawnMoves(rank, file rune, p piece) (squares []string) {
+	if p.PlayerColor == Black {
+		startRank := '7'
+		nextRank := rank-1
+		enPassentRank := '4'
+		if canidateSquare, valid := gs.checkPawnMove(nextRank, file); valid {
+			squares = append(squares, canidateSquare)
+			if startRank == rank {
+				if canidateSquare, valid = gs.checkPawnMove(rank-2, file); valid {
+					squares = append(squares, canidateSquare)
+				}
+			}
+		}
+		if leftFile := file-1; leftFile >= 'a' {
+			captureSquare, validCapture := gs.canCapture(nextRank, leftFile, p)
+			if validCapture {
+				squares = append(squares, captureSquare)
+			} else if rank == enPassentRank {
+				enPassantSquare, validCapture := gs.canCapture(rank, leftFile, p)
+				if validCapture {
+					if otherPiece, _ := gs.Pieces[enPassantSquare]; otherPiece.PieceType == Pawn {
+						if captureSquare, isEmpty := gs.checkPawnMove(nextRank, leftFile); isEmpty {
+							squares = append(squares, captureSquare)
+						}
+					}
+				}
+			}
+		}
+		if rightFile := file+1; rightFile <= 'h' {
+			captureSquare, validCapture := gs.canCapture(nextRank, rightFile, p)
+			if validCapture {
+				squares = append(squares, captureSquare)
+			} else if rank == enPassentRank {
+				enPassantSquare, validCapture := gs.canCapture(rank, rightFile, p)
+				if validCapture {
+					if otherPiece, _ := gs.Pieces[enPassantSquare]; otherPiece.PieceType == Pawn {
+						if captureSquare, isEmpty := gs.checkPawnMove(nextRank, rightFile); isEmpty {
+							squares = append(squares, captureSquare)
+						}
+					}
+				}
+			}
+		}
+	} else {
+		startRank := '2'
+		nextRank := rank+1
+		enPassentRank := '5'
+		if canidateSquare, valid := gs.checkPawnMove(nextRank, file); valid {
+			squares = append(squares, canidateSquare)
+			if startRank == rank {
+				if canidateSquare, valid = gs.checkPawnMove(rank+2, file); valid {
+					squares = append(squares, canidateSquare)
+				}
+			}
+		}
+		if leftFile := file-1; leftFile >= 'a' {
+			captureSquare, validCapture := gs.canCapture(nextRank, leftFile, p)
+			if validCapture {
+				squares = append(squares, captureSquare)
+			} else if rank == enPassentRank {
+				enPassantSquare, validCapture := gs.canCapture(rank, leftFile, p)
+				if validCapture {
+					if otherPiece, _ := gs.Pieces[enPassantSquare]; otherPiece.PieceType == Pawn {
+						if captureSquare, isEmpty := gs.checkPawnMove(nextRank, leftFile); isEmpty {
+							squares = append(squares, captureSquare)
+						}
+					}
+				}
+			}
+		}
+		if rightFile := file+1; rightFile <= 'h' {
+			captureSquare, validCapture := gs.canCapture(nextRank, rightFile, p)
+			if validCapture {
+				squares = append(squares, captureSquare)
+			} else if rank == enPassentRank {
+				enPassantSquare, validCapture := gs.canCapture(rank, rightFile, p)
+				if validCapture {
+					if otherPiece, _ := gs.Pieces[enPassantSquare]; otherPiece.PieceType == Pawn {
+						if captureSquare, isEmpty := gs.checkPawnMove(nextRank, rightFile); isEmpty {
+							squares = append(squares, captureSquare)
+						}
+					}
+				}
+			}
+		}
+	}
+	return
+}
+
+func (gs *GameState) canCapture(r, f rune, p piece) (captureSquare string, validCapture bool) {
+	captureSquare = string(f)+string(r)
+	if otherPiece, occupiedSquare := gs.Pieces[captureSquare]; occupiedSquare {
+		if otherPiece.PlayerColor != p.PlayerColor {
+			validCapture = true
+			return
+		}
+	}
+	validCapture = false
+	return
+}
+
+func (gs *GameState) checkPawnMove(r, f rune) (canidateSquare string, valid bool) {
+	canidateSquare = string(f)+string(r)
+	valid = false
+	if _, occupiedSquare := gs.Pieces[canidateSquare]; !occupiedSquare {
+		valid = true
+	}
 	return
 }
 
