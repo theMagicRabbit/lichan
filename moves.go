@@ -92,23 +92,108 @@ func (gs *GameState) ApplyMove(ms string, turn PlayerColor) (*GameState, error) 
 		return nil, err
 	}
 
-	for _, boardPiece := range gs.Pieces {
-		if boardPiece.PlayerColor != turn {
-			continue
+	var sourceSquare string
+	if len(move.Discriminator) == 2 {
+		sourceSquare = move.Discriminator
+	} else {
+		for _, boardPiece := range gs.Pieces {
+			if !strings.Contains(boardPiece.Square, move.Discriminator) {
+				continue
+			}
+			if boardPiece.PlayerColor != turn {
+				continue
+			}
+			if boardPiece.PieceType != move.PieceType {
+				continue
+			}
+			if isValid, err := gs.isValidMove(move, boardPiece); err != nil {
+				return nil, err
+			} else if !isValid {
+				continue
+			}
+			sourceSquare = boardPiece.Square
 		}
-		if boardPiece.PieceType != move.PieceType {
-			continue
-		}
-		possibleMoves, err := gs.calculatePossibleMoves(boardPiece)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Println(possibleMoves)
 	}
-	return nil, nil
+
+	var nextTurn PlayerColor
+	if gs.PlayerTurn == White {
+		nextTurn = Black
+	} else {
+		nextTurn = White
+	}
+
+	nextState := GameState{
+		Pieces: gs.Pieces,
+		PlayerTurn: nextTurn,
+	}
+	movedPiece := nextState.Pieces[sourceSquare]
+	movedPiece.Square = move.Target
+
+	if move.PromoteTo != "" {
+		movedPiece.PieceType = move.PromoteTo
+	}
+
+	if move.IsCapture {
+		if _, targetExists := nextState.Pieces[move.Target]; targetExists {
+			delete(nextState.Pieces, move.Target)
+		} else if movedPiece.PieceType != Pawn {
+			return nil, fmt.Errorf("No piece found on target square: %v\n", move.Target)
+		} else {
+			targetRank, targetFile := rune(move.Target[1]), rune(move.Target[0])
+			if turn == Black {
+				targetRank--
+			} else {
+				targetRank++
+			}
+			enPassantSquare := string(targetFile)+string(targetRank)
+			if targetPawn, exists := nextState.Pieces[enPassantSquare]; exists && targetPawn.PieceType == Pawn {
+				delete(nextState.Pieces, enPassantSquare)
+			} else {
+				return nil, fmt.Errorf("Invalid capture to %v attempted\n", move.Target)
+			}
+		}
+	}
+
+	
+	if move.IsLongCastle {
+		var rookSource string
+		var rookDest string
+		if turn == Black {
+			rookSource = "a8"
+			rookDest = "d8"
+		} else {
+			rookSource = "a1"
+			rookDest = "d1"
+		}
+		qRook := nextState.Pieces[rookSource]
+		qRook.Square = rookDest
+		delete(nextState.Pieces, rookSource)
+		nextState.Pieces[rookDest] = qRook
+	}
+
+	if move.IsShortCastle {
+		var rookSource string
+		var rookDest string
+		if turn == Black {
+			rookSource = "h8"
+			rookDest = "f8"
+		} else {
+			rookSource = "a8"
+			rookDest = "f1"
+		}
+		qRook := nextState.Pieces[rookSource]
+		qRook.Square = rookDest
+		delete(nextState.Pieces, rookSource)
+		nextState.Pieces[rookDest] = qRook
+	}
+
+	nextState.Pieces[move.Target] = movedPiece
+	delete(nextState.Pieces, sourceSquare)
+
+	return &nextState, nil
 }
 
-func (gs *GameState) isValidMove(move Move, p piece) (isValid bool, err error) {
+func (gs *GameState) isValidMove(move *Move, p piece) (isValid bool, err error) {
 	squares, err := gs.calculatePossibleMoves(p)
 	isValid = slices.Contains(squares, move.Target)
 	return
