@@ -131,13 +131,13 @@ func (gs *GameState) calculatePossibleMoves(p piece) (squares []string, err erro
 	case King:
 		//calcFunc = calcKingMoves
 	case Queen:
-	//	calcFunc = calcQueenMoves
+		calcFunc = gs.calcQueenMoves
 	case Rook:
 		calcFunc = gs.calcRookMoves
 	case Bishop:
-	//	calcFunc = calcBishopMoves
+		calcFunc = gs.calcBishopMoves
 	case Knight:
-	//	calcFunc = calcKnightMoves
+		calcFunc = gs.calcKnightMoves
 	case Pawn:
 	//	calcFunc = calcPawnMoves
 	}
@@ -215,7 +215,63 @@ func (gs *GameState) calcBishopMoves(rank, file rune, p piece) (squares []string
 	return
 }
 
-func calcKnightMoves(square string) (squares []string) {
+func (gs *GameState) calcKnightMoves(rank, file rune, p piece) (squares []string) {
+	if upTwo := rank + 2; upTwo <= '8' {
+		if leftOne := file -1; leftOne >= 'a' {
+			canidateSquare, isValid := gs.checkGameSquare(upTwo, leftOne, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+		if rightOne := file+1; rightOne <= 'h' {
+			canidateSquare, isValid := gs.checkGameSquare(upTwo, rightOne, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+	}
+	if rightTwo := file + 2; rightTwo <= 'h' {
+		if upOne := rank+1; upOne <= '8' {
+			canidateSquare, isValid := gs.checkGameSquare(upOne, rightTwo, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+		if downOne := rank-1; downOne <= '1' {
+			canidateSquare, isValid := gs.checkGameSquare(downOne, rightTwo, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+	}
+	if downTwo := rank - 2; downTwo >= '1' {
+		if leftOne := file-1; leftOne >= 'a' {
+			canidateSquare, isValid := gs.checkGameSquare(downTwo, leftOne, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+		if rightOne := file+1; rightOne <= 'h' {
+			canidateSquare, isValid := gs.checkGameSquare(downTwo, rightOne, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+	}
+	if leftTwo := file - 2; leftTwo >= 'a' {
+		if upOne := rank+1; upOne <= '8' {
+			canidateSquare, isValid := gs.checkGameSquare(upOne, leftTwo, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+		if downOne := rank-1; downOne <= '1' {
+			canidateSquare, isValid := gs.checkGameSquare(downOne, leftTwo, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+	}
 	return
 }
 
