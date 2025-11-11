@@ -154,57 +154,29 @@ func calcQueenMoves(square string) (squares []string) {
 }
 
 func (gs *GameState) calcRookMoves(rank, file rune, p piece) (squares []string) {
-	for r := rank + 1; r <= '8'; r++ {
-		canidateSquare := string(file) + string(r)
-		if canidateSquare == p.Square {
-			continue
+	for r, f := rank + 1, file; r <= '8'; r++ {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
 		}
-		if otherPiece, ok := gs.Pieces[canidateSquare]; ok {
-			if otherPiece.PlayerColor != p.PlayerColor {
-				squares = append(squares, canidateSquare)
-			}
-			break
-		}
-		squares = append(squares, canidateSquare)
 	}
-	for r := rank - 1; r >= '1'; r-- {
-		canidateSquare := string(file) + string(r)
-		if canidateSquare == p.Square {
-			continue
+	for r, f := rank - 1, file; r >= '1'; r-- {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
 		}
-		if otherPiece, ok := gs.Pieces[canidateSquare]; ok {
-			if otherPiece.PlayerColor != p.PlayerColor {
-				squares = append(squares, canidateSquare)
-			}
-			break
-		}
-		squares = append(squares, canidateSquare)
 	}
-	for f := file - 1; f >= 'a'; f-- {
-		canidateSquare := string(f) + string(rank)
-		if canidateSquare == p.Square {
-			continue
+	for r, f := rank, file - 1; f >= 'a'; f-- {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
 		}
-		if otherPiece, ok := gs.Pieces[canidateSquare]; ok {
-			if otherPiece.PlayerColor != p.PlayerColor {
-				squares = append(squares, canidateSquare)
-			}
-			break
-		}
-		squares = append(squares, canidateSquare)
 	}
-	for f := file + 1; f <= 'h'; f++ {
-		canidateSquare := string(f) + string(rank)
-		if canidateSquare == p.Square {
-			continue
+	for r, f := rank, file + 1; f <= 'h'; f++ {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
 		}
-		if otherPiece, ok := gs.Pieces[canidateSquare]; ok {
-			if otherPiece.PlayerColor != p.PlayerColor {
-				squares = append(squares, canidateSquare)
-			}
-			break
-		}
-		squares = append(squares, canidateSquare)
 	}
 	return
 }
