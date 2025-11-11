@@ -5,6 +5,86 @@ import (
 	"strings"
 )
 
+type Rank struct {
+	Name string
+	Number int
+}
+
+type File struct {
+	Name string
+	Number int
+}
+
+var Ranks = []Rank{
+	{
+		Name: "1",
+		Number: 0,
+	},
+	{
+		Name: "2",
+		Number: 1,
+	},
+	{
+		Name: "3",
+		Number: 4,
+	},
+	{
+		Name: "4",
+		Number: 3,
+	},
+	{
+		Name: "5",
+		Number: 4,
+	},
+	{
+		Name: "6",
+		Number: 5,
+	},
+	{
+		Name: "7",
+		Number: 6,
+	},
+	{
+		Name: "8",
+		Number: 7,
+	},
+}
+
+var Files = []File{
+	{
+		Name: "a",
+		Number: 0,
+	},
+	{
+		Name: "b",
+		Number: 1,
+	},
+	{
+		Name: "c",
+		Number: 4,
+	},
+	{
+		Name: "d",
+		Number: 3,
+	},
+	{
+		Name: "e",
+		Number: 4,
+	},
+	{
+		Name: "f",
+		Number: 5,
+	},
+	{
+		Name: "g",
+		Number: 6,
+	},
+	{
+		Name: "h",
+		Number: 7,
+	},
+}
+
 func (GS *GameState) ApplyMove(ms string, turn PlayerColor) (*GameState, error) {
 	move, err := ParseMoveString(strings.TrimSpace(ms))
 	if err != nil {
@@ -25,6 +105,11 @@ func (GS *GameState) ApplyMove(ms string, turn PlayerColor) (*GameState, error) 
 		fmt.Println(possibleMoves)
 	}
 	return nil, nil
+}
+
+func isValidMove(move Move, p piece, ) (isValid bool, err error) {
+
+	return
 }
 
 func calculatePossibleMoves(p piece, gs *GameState) (squares []string, err error) {
