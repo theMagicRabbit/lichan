@@ -165,6 +165,7 @@ func (gs *GameState) calcRookMoves(rank, file rune, p piece) (squares []string) 
 			}
 			break
 		}
+		squares = append(squares, canidateSquare)
 	}
 	for r := rank - 1; r >= '1'; r-- {
 		canidateSquare := string(file) + string(r)
@@ -177,6 +178,7 @@ func (gs *GameState) calcRookMoves(rank, file rune, p piece) (squares []string) 
 			}
 			break
 		}
+		squares = append(squares, canidateSquare)
 	}
 	for f := file - 1; f >= 'a'; f-- {
 		canidateSquare := string(f) + string(rank)
@@ -189,6 +191,7 @@ func (gs *GameState) calcRookMoves(rank, file rune, p piece) (squares []string) 
 			}
 			break
 		}
+		squares = append(squares, canidateSquare)
 	}
 	for f := file + 1; f <= 'h'; f++ {
 		canidateSquare := string(f) + string(rank)
@@ -201,11 +204,40 @@ func (gs *GameState) calcRookMoves(rank, file rune, p piece) (squares []string) 
 			}
 			break
 		}
+		squares = append(squares, canidateSquare)
 	}
 	return
 }
 
-func calcBishopMoves(square string) (squares []string) {
+func (gs *GameState) calcBishopMoves(rank, file rune, p piece) (squares []string) {
+	// up right
+	for r, f := rank + 1, file + 1; r <= '8' && f <= 'h'; r, f = r+1, f+1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		}
+	}
+	// down right
+	for r, f := rank - 1, file + 1; r >= '1' && f <= 'h'; r, f = r-1, f+1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		}
+	}
+	// down left 
+	for r, f := rank - 1, file - 1; r >= '1' && f >= 'a'; r, f = r-1, f-1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		}
+	}
+	// up left
+	for r, f := rank + 1, file - 1; r <= '8' && f >= 'a'; r, f = r+1, f-1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		}
+	}
 	return
 }
 
@@ -214,6 +246,18 @@ func calcKnightMoves(square string) (squares []string) {
 }
 
 func calcPawnMoves(square string) (squares []string) {
+	return
+}
+
+func (gs *GameState) checkGameSquare(r, f rune, p piece) (canidateSquare string, valid bool) {
+	canidateSquare = string(f) + string(r)
+	if otherPiece, occupiedSquare := gs.Pieces[canidateSquare]; occupiedSquare {
+		if otherPiece.PlayerColor != p.PlayerColor {
+			valid = true
+		}
+	} else {
+		valid = true
+	}
 	return
 }
 
