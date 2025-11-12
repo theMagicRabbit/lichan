@@ -23,6 +23,8 @@ var mate string = "#"
 var capture string = "x"
 var promote string = "="
 
+var standardStartingFEN string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
 var discriminatorRE = regexp.MustCompile(`^[a-h]?[1-8]?$`)
 var squareRE = regexp.MustCompile(`^[a-h][1-8]$`)
 
@@ -112,6 +114,7 @@ type Game struct {
 			RatingDiff int `json:"ratingDiff"`
 		} `json:"black"`
 	} `json:"players"`
+	InitalFEN string `json:"initialFen"`
 	FullID  string `json:"fullId"`
 	Winner  string `json:"winner"`
 	Opening struct {
@@ -257,6 +260,8 @@ func GameFromPGN(data []byte) (*Game, error) {
 				game.Clock.Initial = initial
 				game.Clock.Increment = increment
 			}
+		case "fen":
+			game.InitalFEN = strings.TrimSpace(val)
 		case "moves":
 			moveNumberRE, err := regexp.Compile(`^\d+\.$`)
 			if err != nil {
@@ -382,7 +387,7 @@ func GameToPGN(game *Game, url string) (string, error) {
 [WhiteElo "%d"]
 [BlackElo "%d"]
 [Opening "%s"]
-[TimeControl "%s"]
+[TimeControl "%s"]%s
 
 %s
 `
@@ -429,6 +434,13 @@ func GameToPGN(game *Game, url string) (string, error) {
 	}
 	moveString = fmt.Sprintf("%s %s", moveString, result)
 
+	var fen string
+	if game.InitalFEN == "" {
+		fen = fmt.Sprintf("\n[FEN \"%s\"]", standardStartingFEN)
+	} else {
+		fen = fmt.Sprintf("\n[FEN \"%s\"]", game.InitalFEN)
+	}
+
 
 	gamePGN := fmt.Sprintf(pgnTemplate,
 				event,
@@ -443,6 +455,7 @@ func GameToPGN(game *Game, url string) (string, error) {
 				game.Players.Black.Rating,
 				game.Opening.Name,
 				gameTimeControl,
+				fen,
 				moveString,
 	)
 	return gamePGN, nil
