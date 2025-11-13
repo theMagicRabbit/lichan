@@ -108,15 +108,26 @@ func (s *state) handlerAnalyze(username string) error {
 		if err != nil {
 			return err
 		}
+		if game.InitalFEN == "" {
+			game.InitalFEN = standardStartingFEN
+		}
 
+		var gs *GameState
 		for ms := range strings.SplitSeq(game.Moves, " ") {
-	// Feed game to stockfish while processing results
-			move, err := ParseMoveString(ms)
+			var extendedMoveString string
+			if gs == nil {
+				gs, err = NewGameState(game.InitalFEN)
+				if err != nil {
+					log.Printf("Unable to parse FEN: %v\n", err)
+					break
+				}
+			}
+			gs, extendedMoveString, err = gs.ApplyAndTranslateMove(ms, gs.PlayerTurn)
 			if err != nil {
-				log.Printf("Unable to parse move: %v\n", err)
+				log.Printf("Unable to parse move %s: %v\n", ms, err)
 				break
 			}
-			fmt.Println(*move)
+			fmt.Printf("Move for stockfish: %s\n", extendedMoveString)
 		}
 
 	// Write output to processed file
