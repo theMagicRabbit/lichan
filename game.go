@@ -573,10 +573,10 @@ func ParseMoveString(ms string) (move *Move, err error) {
 		}
 		switch t {
 		case longCastle:
-			move.Target = t
+			move.PieceType = King
 			move.IsLongCastle = true
 		case shortCastle:
-			move.Target = t
+			move.PieceType = King
 			move.IsShortCastle = true
 		case capture:
 			move.IsCapture = true

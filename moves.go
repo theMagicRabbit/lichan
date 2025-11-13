@@ -12,6 +12,20 @@ func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (*GameSt
 		return nil, "", err
 	}
 
+	if move.IsLongCastle && turn == Black {
+		move.Target = "c8"
+	}
+	if move.IsLongCastle && turn == White {
+		move.Target = "c1"
+	}
+	if move.IsShortCastle && turn == Black {
+		move.Target = "g8"
+	}
+	if move.IsShortCastle && turn == White {
+		move.Target = "g1"
+	}
+
+
 	var sourceSquare string
 	if len(move.Discriminator) == 2 {
 		sourceSquare = move.Discriminator

@@ -124,7 +124,7 @@ func (s *state) handlerAnalyze(username string) error {
 			}
 			gs, extendedMoveString, err = gs.ApplyAndTranslateMove(ms, gs.PlayerTurn)
 			if err != nil {
-				log.Printf("Unable to parse move %s: %v\n", ms, err)
+				log.Printf("%s | Unable to parse move %s: %v\n", game.ID, ms, err)
 				break
 			}
 			fmt.Printf("Move for stockfish: %s\n", extendedMoveString)
