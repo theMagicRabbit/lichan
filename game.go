@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 var fileTokens []string = []string{"a", "b", "c", "d", "e", "f", "g", "h"}
 var rankTokens []string = []string{"1", "2", "3", "4", "5", "6", "7", "8"}
@@ -459,6 +460,72 @@ func GameToPGN(game *Game, url string) (string, error) {
 				moveString,
 	)
 	return gamePGN, nil
+}
+
+func NewGameState(fen string) (gs *GameState, err error) {
+	if strings.TrimSpace(fen) == standardStartingFEN {
+		gs = initalGameState()
+		return
+	}
+
+	if fen == "" {
+		err = errors.New("Empty FEN string")
+		return
+	}
+
+	fenFields := strings.Split(fen, " ")
+	if len(fenFields) != 6 {
+		err = errors.New("Invalid FEN string")
+		return
+	}
+
+	fenRanks := strings.Split(fenFields[0], "/")
+	if len(fenRanks) != 8 {
+		err = errors.New("Invalid move string")
+		return
+	}
+
+	gs = &GameState{}
+
+	if fenFields[1] == "w" {
+		gs.PlayerTurn = White
+	} else {
+		gs.PlayerTurn = Black
+	}
+
+	squareTracker := 0
+	for ch := range fen[0] {
+		if unicode.IsNumber(rune(ch)) {
+			num, _ := strconv.Atoi(string(ch))
+			squareTracker = squareTracker + num
+			continue
+		}
+		newPiece := piece{}
+		if unicode.IsUpper(rune(ch)) {
+			newPiece.PlayerColor = White
+		} else {
+			newPiece.PlayerColor = Black
+		}
+		switch strings.ToLower(string(ch)) {
+		case "p":
+			newPiece.PieceType = Pawn
+		case "n":
+			newPiece.PieceType = Knight
+		case "b":
+			newPiece.PieceType = Bishop
+		case "r":
+			newPiece.PieceType = Rook
+		case "q":
+			newPiece.PieceType = Queen
+		case "k":
+			newPiece.PieceType = King
+		}
+		newPiece.Square = fenBoardOrder[squareTracker]
+		gs.Pieces[newPiece.Square] = newPiece
+		squareTracker++
+	}
+
+	return
 }
 
 func ParseMoveString(ms string) (move *Move, err error) {
