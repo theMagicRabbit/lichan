@@ -124,7 +124,12 @@ func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (*GameSt
 	nextState.Pieces[move.Target] = movedPiece
 	delete(nextState.Pieces, sourceSquare)
 
-	return &nextState, sourceSquare+move.Target, nil
+	extendedMove := sourceSquare+move.Target
+	if len(extendedMove) != 4 {
+		return nil, extendedMove, fmt.Errorf("Stockfish move is wrong length. source: %s; dest: %s\n", sourceSquare, move.Target)
+	}
+
+	return &nextState, extendedMove, nil
 }
 
 func (gs *GameState) isValidMove(move *Move, p piece) (isValid bool, err error) {
