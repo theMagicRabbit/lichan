@@ -274,27 +274,31 @@ func (gs *GameState) calcQueenMoves(rank, file rune, p piece) (squares []string)
 func (gs *GameState) calcRookMoves(rank, file rune, p piece) (squares []string) {
 	for r, f := rank+1, file; r <= '8'; r++ {
 		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
-		if isValid {
-			squares = append(squares, canidateSquare)
+		if !isValid {
+			break
 		}
+		squares = append(squares, canidateSquare)
 	}
 	for r, f := rank-1, file; r >= '1'; r-- {
 		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
-		if isValid {
-			squares = append(squares, canidateSquare)
+		if !isValid {
+			break
 		}
+		squares = append(squares, canidateSquare)
 	}
 	for r, f := rank, file-1; f >= 'a'; f-- {
 		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
-		if isValid {
-			squares = append(squares, canidateSquare)
+		if !isValid {
+			break
 		}
+		squares = append(squares, canidateSquare)
 	}
 	for r, f := rank, file+1; f <= 'h'; f++ {
 		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
-		if isValid {
-			squares = append(squares, canidateSquare)
+		if !isValid {
+			break
 		}
+		squares = append(squares, canidateSquare)
 	}
 	return
 }
