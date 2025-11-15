@@ -80,11 +80,11 @@ func (s *state) handlerAnalyze(username string) error {
 	// START LOOP
 	for _, file := range files {
 		gameFile := file.Name()
-		if file.IsDir() || strings.ToLower(filepath.Ext(gameFile)) != ".pgn"  {
+		if file.IsDir() || strings.ToLower(filepath.Ext(gameFile)) != ".pgn" {
 			continue
 		}
 		gamePath := filepath.Join(userGames, gameFile)
-		engineFile := strings.ToLower(strings.TrimSuffix(gameFile, filepath.Ext(gameFile))+"_stockfish.pgn")
+		engineFile := strings.ToLower(strings.TrimSuffix(gameFile, filepath.Ext(gameFile)) + "_stockfish.pgn")
 		enginePath := filepath.Join(engineGames, engineFile)
 		_, err := os.Stat(enginePath)
 		if err == nil {
@@ -130,10 +130,8 @@ func (s *state) handlerAnalyze(username string) error {
 			fmt.Printf("Move for stockfish: %s\n", extendedMoveString)
 		}
 
-	// Write output to processed file
+		// Write output to processed file
 	}
 	// STOP LOOP
 	return nil
 }
-
-

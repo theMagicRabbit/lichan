@@ -5,26 +5,33 @@ import (
 )
 
 func TestMoveTokenizer(t *testing.T) {
-	tests := []struct{
-		Input struct{
+	tests := []struct {
+		Input struct {
 			String string
-			AtEnd bool
+			AtEnd  bool
 		}
-		Expected struct{
+		Expected struct {
 			Advance int
-			Token string
-			Err error
+			Token   string
+			Err     error
 		}
 	}{
 		{
-			Input: struct{String string; AtEnd bool}{
+			Input: struct {
+				String string
+				AtEnd  bool
+			}{
 				String: "O-O-O",
-				AtEnd: false,
+				AtEnd:  false,
 			},
-			Expected: struct{Advance int; Token string; Err error}{
+			Expected: struct {
+				Advance int
+				Token   string
+				Err     error
+			}{
 				Advance: 5,
-				Token: "O-O-O",
-				Err: nil,
+				Token:   "O-O-O",
+				Err:     nil,
 			},
 		},
 	}
@@ -46,23 +53,23 @@ func TestMoveTokenizer(t *testing.T) {
 }
 
 func TestParseMoveString(t *testing.T) {
-	tests := []struct{
-		Input string
+	tests := []struct {
+		Input    string
 		Expected Move
-		E error
+		E        error
 	}{
 		{
 			Input: "e4",
 			Expected: Move{
 				PieceType: Pawn,
-				Target: "e4",
+				Target:    "e4",
 			},
 			E: nil,
 		},
 		{
 			Input: "O-O-O",
 			Expected: Move{
-				Target: "O-O-O",
+				Target:       "O-O-O",
 				IsLongCastle: true,
 			},
 			E: nil,
@@ -70,7 +77,7 @@ func TestParseMoveString(t *testing.T) {
 		{
 			Input: "Qxe5",
 			Expected: Move{
-				Target: "e5",
+				Target:    "e5",
 				IsCapture: true,
 				PieceType: Queen,
 			},
@@ -79,9 +86,9 @@ func TestParseMoveString(t *testing.T) {
 		{
 			Input: "dxe5",
 			Expected: Move{
-				Target: "e5",
-				IsCapture: true,
-				PieceType: Pawn,
+				Target:        "e5",
+				IsCapture:     true,
+				PieceType:     Pawn,
 				Discriminator: "d",
 			},
 			E: nil,
@@ -89,7 +96,7 @@ func TestParseMoveString(t *testing.T) {
 		{
 			Input: "Nc6",
 			Expected: Move{
-				Target: "c6",
+				Target:    "c6",
 				PieceType: Knight,
 			},
 			E: nil,

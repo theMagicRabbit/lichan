@@ -9,8 +9,8 @@ import (
 )
 
 type state struct {
-	Config *config.Config
-	ApiUrl string
+	Config  *config.Config
+	ApiUrl  string
 	SiteUrl string
 }
 
@@ -26,10 +26,10 @@ func main() {
 		log.Fatalf("Error reading config: %v\n", err)
 	}
 	defer config.WriteConfig(configFile)
-	
+
 	state := state{
-		Config: config,
-		ApiUrl: "https://lichess.org",
+		Config:  config,
+		ApiUrl:  "https://lichess.org",
 		SiteUrl: "https://lichess.org",
 	}
 
@@ -42,4 +42,3 @@ func main() {
 		state.handlerAnalyze(user)
 	}
 }
-

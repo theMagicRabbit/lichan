@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode"
 )
+
 var fileTokens []string = []string{"a", "b", "c", "d", "e", "f", "g", "h"}
 var rankTokens []string = []string{"1", "2", "3", "4", "5", "6", "7", "8"}
 var pieceTokens []string = []string{"K", "Q", "R", "B", "N"}
@@ -30,41 +31,45 @@ var discriminatorRE = regexp.MustCompile(`^[a-h]?[1-8]?$`)
 var squareRE = regexp.MustCompile(`^[a-h][1-8]$`)
 
 type PlayerColor int
+
 const (
 	White PlayerColor = iota
-	Black 
+	Black
 )
 
 type PieceType string
+
 const (
-	King PieceType = "K"
-	Queen PieceType = "Q"
-	Rook PieceType = "R"
+	King   PieceType = "K"
+	Queen  PieceType = "Q"
+	Rook   PieceType = "R"
 	Bishop PieceType = "B"
 	Knight PieceType = "N"
-	Pawn PieceType = ""
+	Pawn   PieceType = ""
 )
-var IsValidPieceType = map[PieceType]struct{} {
-	King: {},
-	Queen: {},
-	Rook: {},
+
+var IsValidPieceType = map[PieceType]struct{}{
+	King:   {},
+	Queen:  {},
+	Rook:   {},
 	Bishop: {},
 	Knight: {},
-	Pawn: {},
+	Pawn:   {},
 }
+
 type piece struct {
-	PieceType PieceType
+	PieceType   PieceType
 	PlayerColor PlayerColor
-	Square string
+	Square      string
 }
 
 type GameState struct {
 	PlayerTurn PlayerColor
-	Pieces map[string]piece
+	Pieces     map[string]piece
 }
 
 type Move struct {
-	PieceType, PromoteTo PieceType
+	PieceType, PromoteTo  PieceType
 	Target, Discriminator string
 	IsCheck, IsCheckmate,
 	IsCapture, IsLongCastle,
@@ -72,6 +77,7 @@ type Move struct {
 }
 
 type GameResult string
+
 const (
 	WhiteWins GameResult = "1-0"
 	BlackWins GameResult = "0-1"
@@ -79,11 +85,11 @@ const (
 	Unknown   GameResult = "*"
 )
 
-var IsValidGameResult = map[GameResult]struct{} {
+var IsValidGameResult = map[GameResult]struct{}{
 	WhiteWins: {},
 	BlackWins: {},
-	Draw: {},
-	Unknown: {},
+	Draw:      {},
+	Unknown:   {},
 }
 
 type Game struct {
@@ -116,9 +122,9 @@ type Game struct {
 		} `json:"black"`
 	} `json:"players"`
 	InitalFEN string `json:"initialFen"`
-	FullID  string `json:"fullId"`
-	Winner  string `json:"winner"`
-	Opening struct {
+	FullID    string `json:"fullId"`
+	Winner    string `json:"winner"`
+	Opening   struct {
 		Eco  string `json:"eco"`
 		Name string `json:"name"`
 		Ply  int    `json:"ply"`
@@ -363,7 +369,7 @@ func tokenizerPGN(data []byte, atEOF bool) (advance int, token []byte, err error
 		if nextByte == "\"" {
 			break
 		}
-		
+
 		if nextByte == "\n" {
 			continue
 		}
@@ -418,7 +424,7 @@ func GameToPGN(game *Game, url string) (string, error) {
 
 	moveSlice := strings.Split(game.Moves, " ")
 	whiteMove := true
-	var moveString string 
+	var moveString string
 	moveCounter := 1
 	for _, move := range moveSlice {
 		if !whiteMove {
@@ -442,22 +448,21 @@ func GameToPGN(game *Game, url string) (string, error) {
 		fen = fmt.Sprintf("\n[FEN \"%s\"]", game.InitalFEN)
 	}
 
-
 	gamePGN := fmt.Sprintf(pgnTemplate,
-				event,
-				url,
-				game.ID,
-				gameDate,
-				game.Players.White.User.Name,
-				game.Players.Black.User.Name,
-				result,
-				game.ID,
-				game.Players.White.Rating,
-				game.Players.Black.Rating,
-				game.Opening.Name,
-				gameTimeControl,
-				fen,
-				moveString,
+		event,
+		url,
+		game.ID,
+		gameDate,
+		game.Players.White.User.Name,
+		game.Players.Black.User.Name,
+		result,
+		game.ID,
+		game.Players.White.Rating,
+		game.Players.Black.Rating,
+		game.Opening.Name,
+		gameTimeControl,
+		fen,
+		moveString,
 	)
 	return gamePGN, nil
 }
@@ -611,4 +616,3 @@ func ParseMoveString(ms string) (move *Move, err error) {
 	}
 	return
 }
-
