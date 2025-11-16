@@ -111,13 +111,13 @@ func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (*GameSt
 			rookSource = "h8"
 			rookDest = "f8"
 		} else {
-			rookSource = "a8"
+			rookSource = "h1"
 			rookDest = "f1"
 		}
-		qRook := nextState.Pieces[rookSource]
-		qRook.Square = rookDest
+		kRook := nextState.Pieces[rookSource]
+		kRook.Square = rookDest
 		delete(nextState.Pieces, rookSource)
-		nextState.Pieces[rookDest] = qRook
+		nextState.Pieces[rookDest] = kRook
 	}
 
 	nextState.Pieces[move.Target] = movedPiece
