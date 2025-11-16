@@ -73,14 +73,16 @@ func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (*GameSt
 		} else if movedPiece.PieceType != Pawn {
 			return nil, "", fmt.Errorf("No piece found on target square: %v\n", move.Target)
 		} else {
-			targetRank, targetFile := rune(move.Target[1]), rune(move.Target[0])
-			if turn == Black {
-				targetRank--
-			} else {
-				targetRank++
+			targetRank := string(sourceSquare[1])
+			if !(turn == Black && "4" == targetRank) && !(turn == White && "5" == targetRank) {
+				return nil, "", fmt.Errorf("Invalid capture to %v attempted\n", move.Target)
 			}
+
+			targetFile := move.Target[0]
 			enPassantSquare := string(targetFile) + string(targetRank)
-			if targetPawn, exists := nextState.Pieces[enPassantSquare]; exists && targetPawn.PieceType == Pawn {
+			if targetPawn, exists := nextState.Pieces[enPassantSquare]; exists &&
+			targetPawn.PieceType == Pawn &&
+			targetPawn.PlayerColor != movedPiece.PlayerColor {
 				delete(nextState.Pieces, enPassantSquare)
 			} else {
 				return nil, "", fmt.Errorf("Invalid capture to %v attempted\n", move.Target)
