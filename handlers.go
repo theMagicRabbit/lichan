@@ -127,10 +127,11 @@ func (s *state) handlerAnalyze(username string) error {
 			log.Printf("Unable to send commands to stockfish: %v\n", err)
 			break
 		}
+		<-stockfish.Ready
 
 
-		fmt.Print("Press <ENTER> to continue...")
-		bufio.NewReader(os.Stdin).ReadBytes('\n')
+		//fmt.Print("Press <ENTER> to continue...")
+		//bufio.NewReader(os.Stdin).ReadBytes('\n')
 
 		for ms := range strings.SplitSeq(game.Moves, " ") {
 			var extendedMoveString string

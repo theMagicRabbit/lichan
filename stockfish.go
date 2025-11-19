@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 )
 
 type StockfishProc struct {
@@ -13,6 +14,7 @@ type StockfishProc struct {
 	Stdin io.WriteCloser
 	Stdout io.ReadCloser
 	Stderr io.ReadCloser
+	Ready chan bool
 }
 
 
@@ -20,6 +22,7 @@ type StockfishProc struct {
 func InitStockfish() (proc *StockfishProc, err error) {
 	proc = &StockfishProc{
 		Cmd: exec.CommandContext(context.Background(), "stockfish"),
+		Ready: make(chan bool),
 	}
 
 	stdin, err := proc.Cmd.StdinPipe()
@@ -45,6 +48,19 @@ func InitStockfish() (proc *StockfishProc, err error) {
 func (sp *StockfishProc) ProcessOutput() {
 	sfScanner := bufio.NewScanner(sp.Stdout)
 	for sfScanner.Scan() {
-		fmt.Println("Output:", sfScanner.Text())
+		text := sfScanner.Text()
+		if text == "" {
+			continue
+		}
+
+		tokens := strings.Split(text, " ")
+		switch tokens[0] {
+		case "Stockfish", "option", "id":
+			continue
+		case "uciok":
+			close(sp.Ready)
+		default:
+			fmt.Println(tokens)
+		}
 	}
 }
