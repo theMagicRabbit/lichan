@@ -10,34 +10,41 @@ import (
 
 type StockfishProc struct {
 	Cmd *exec.Cmd
-	Stdin *io.PipeWriter
-	Stdout *io.PipeReader
-	Stderr *io.PipeReader
+	Stdin io.WriteCloser
+	Stdout io.ReadCloser
+	Stderr io.ReadCloser
 }
 
 
 
 func InitStockfish() (proc *StockfishProc, err error) {
-	stdinReader, stdinWriter := io.Pipe()
-	stdoutReader, stdoutWriter := io.Pipe()
-	stderrReader, stderrWriter := io.Pipe()
 	proc = &StockfishProc{
 		Cmd: exec.CommandContext(context.Background(), "stockfish"),
-		Stdin: stdinWriter,
-		Stdout: stdoutReader,
-		Stderr: stderrReader,
 	}
-	proc.Cmd.Stdin = stdinReader
-	proc.Cmd.Stdout = stdoutWriter
-	proc.Cmd.Stderr = stderrWriter
+
+	stdin, err := proc.Cmd.StdinPipe()
+	if err != nil {
+		return
+	}
+
+	stdout, err := proc.Cmd.StdoutPipe()
+	if err != nil {
+		return
+	}
+
+	stderr, err := proc.Cmd.StderrPipe()
+	if err != nil {
+		return
+	}
+	proc.Stdin = stdin
+	proc.Stdout = stdout
+	proc.Stderr = stderr
 	return
 }
 
 func (sp *StockfishProc) ProcessOutput() {
 	sfScanner := bufio.NewScanner(sp.Stdout)
-	for {
-		if sfScanner.Scan() {
-			fmt.Println("Output:", sfScanner.Text())
-		}
+	for sfScanner.Scan() {
+		fmt.Println("Output:", sfScanner.Text())
 	}
 }

@@ -119,6 +119,7 @@ func (s *state) handlerAnalyze(username string) error {
 			break
 		}
 
+		go stockfish.ProcessOutput()
 		stockfish.Cmd.Start()
 
 		_, err = stockfish.Stdin.Write([]byte("uci\n"))
@@ -127,7 +128,9 @@ func (s *state) handlerAnalyze(username string) error {
 			break
 		}
 
-		go stockfish.ProcessOutput()
+
+		fmt.Print("Press <ENTER> to continue...")
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
 
 		for ms := range strings.SplitSeq(game.Moves, " ") {
 			var extendedMoveString string
