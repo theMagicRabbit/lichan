@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"fmt"
 	"io"
 	"os/exec"
 )
@@ -15,7 +17,7 @@ type StockfishProc struct {
 
 
 
-func InitStockfish(startFEN string) (proc *StockfishProc, err error) {
+func InitStockfish() (proc *StockfishProc, err error) {
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
 	stderrReader, stderrWriter := io.Pipe()
@@ -29,4 +31,13 @@ func InitStockfish(startFEN string) (proc *StockfishProc, err error) {
 	proc.Cmd.Stdout = stdoutWriter
 	proc.Cmd.Stderr = stderrWriter
 	return
+}
+
+func (sp *StockfishProc) ProcessOutput() {
+	sfScanner := bufio.NewScanner(sp.Stdout)
+	for {
+		if sfScanner.Scan() {
+			fmt.Println("Output:", sfScanner.Text())
+		}
+	}
 }

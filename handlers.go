@@ -113,6 +113,22 @@ func (s *state) handlerAnalyze(username string) error {
 		}
 
 		var gs *GameState
+		stockfish, err := InitStockfish()
+		if err != nil {
+			log.Printf("Unable to start stockfish: %v\n", err)
+			break
+		}
+
+		stockfish.Cmd.Start()
+
+		_, err = stockfish.Stdin.Write([]byte("uci\n"))
+		if err != nil {
+			log.Printf("Unable to send commands to stockfish: %v\n", err)
+			break
+		}
+
+		go stockfish.ProcessOutput()
+
 		for ms := range strings.SplitSeq(game.Moves, " ") {
 			var extendedMoveString string
 			if gs == nil {
