@@ -151,7 +151,8 @@ func (s *state) handlerAnalyze(username string) error {
 				log.Printf("%s | Unable to parse move %s: %v\n", game.ID, ms, err)
 				break
 			}
-			fmt.Printf("Move for stockfish: %s\n", extendedMoveString)
+			stockfish.SearchMove(extendedMoveString)
+			<-stockfish.Ready
 		}
 
 		// Write output to processed file

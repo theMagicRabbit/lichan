@@ -7,6 +7,7 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type StockfishProc struct {
@@ -15,6 +16,7 @@ type StockfishProc struct {
 	Stdout io.ReadCloser
 	Stderr io.ReadCloser
 	Ready chan bool
+	Moves string
 }
 
 
@@ -52,6 +54,7 @@ func (sp *StockfishProc) SetupGame(fen string) (err error) {
 	} else {
 		command = fmt.Sprintf("position fen %s\n", fen)
 	}
+	sp.Moves = fmt.Sprintf("%s moves", command)
 	_, err = sp.Stdin.Write([]byte(command))
 	if err != nil {
 		return
@@ -63,6 +66,32 @@ func (sp *StockfishProc) SetupGame(fen string) (err error) {
 
 func (sp *StockfishProc) IsReady() (err error) {
 	_, err = sp.Stdin.Write([]byte("isready\n"))
+	return
+}
+
+func (sp *StockfishProc) SearchMove(move string) (err error) {
+	sp.Moves = fmt.Sprintf("%s %s", sp.Moves, move)
+	thinkTime := int(time.Minute / time.Millisecond)
+
+	err = sp.IsReady()
+	if err != nil {
+		return
+	}
+	<-sp.Ready
+
+	_, err = sp.Stdin.Write([]byte(sp.Moves + "\n"))
+	if err != nil {
+		return
+	}
+
+	err = sp.IsReady()
+	if err != nil {
+		return
+	}
+	<-sp.Ready
+
+	command := fmt.Sprintf("go depth 245 movetime %d\n", thinkTime)
+	_, err = sp.Stdin.Write([]byte(command))
 	return
 }
 
@@ -79,6 +108,9 @@ func (sp *StockfishProc) ProcessOutput() {
 		case "Stockfish", "option", "id":
 			continue
 		case "uciok", "readyok":
+			sp.Ready <- true
+		case "bestmove":
+			fmt.Println("Stockfish best move:", tokens[1])
 			sp.Ready <- true
 		default:
 			fmt.Println(tokens)

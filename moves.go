@@ -63,8 +63,19 @@ func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (*GameSt
 	movedPiece := nextState.Pieces[sourceSquare]
 	movedPiece.Square = move.Target
 
+	var promoteTo string
 	if move.PromoteTo != "" {
 		movedPiece.PieceType = move.PromoteTo
+		switch move.PromoteTo {
+		case Queen:
+			promoteTo = "q"
+		case Rook:
+			promoteTo = "r"
+		case Bishop:
+			promoteTo = "b"
+		case Knight:
+			promoteTo = "n"
+		}
 	}
 
 	if move.IsCapture {
@@ -125,8 +136,8 @@ func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (*GameSt
 	nextState.Pieces[move.Target] = movedPiece
 	delete(nextState.Pieces, sourceSquare)
 
-	extendedMove := sourceSquare + move.Target
-	if len(extendedMove) != 4 {
+	extendedMove := sourceSquare + move.Target + promoteTo
+	if moveLen := len(extendedMove); !(moveLen == 4 || moveLen == 5) {
 		return nil, extendedMove, fmt.Errorf("Stockfish move is wrong length. source: %s; dest: %s\n", sourceSquare, move.Target)
 	}
 
