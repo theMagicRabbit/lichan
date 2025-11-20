@@ -45,6 +45,27 @@ func InitStockfish() (proc *StockfishProc, err error) {
 	return
 }
 
+func (sp *StockfishProc) SetupGame(fen string) (err error) {
+	var command string
+	if fen == standardStartingFEN {
+		command = "position startpos\n"
+	} else {
+		command = fmt.Sprintf("position fen %s\n", fen)
+	}
+	_, err = sp.Stdin.Write([]byte(command))
+	if err != nil {
+		return
+	}
+
+	err = sp.IsReady()
+	return
+}
+
+func (sp *StockfishProc) IsReady() (err error) {
+	_, err = sp.Stdin.Write([]byte("isready\n"))
+	return
+}
+
 func (sp *StockfishProc) ProcessOutput() {
 	sfScanner := bufio.NewScanner(sp.Stdout)
 	for sfScanner.Scan() {
@@ -57,8 +78,8 @@ func (sp *StockfishProc) ProcessOutput() {
 		switch tokens[0] {
 		case "Stockfish", "option", "id":
 			continue
-		case "uciok":
-			close(sp.Ready)
+		case "uciok", "readyok":
+			sp.Ready <- true
 		default:
 			fmt.Println(tokens)
 		}

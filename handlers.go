@@ -130,8 +130,12 @@ func (s *state) handlerAnalyze(username string) error {
 		<-stockfish.Ready
 
 
-		//fmt.Print("Press <ENTER> to continue...")
-		//bufio.NewReader(os.Stdin).ReadBytes('\n')
+		err = stockfish.SetupGame(game.InitalFEN)
+		if err != nil {
+			log.Printf("Game setup failed: %v\n", err)
+			break
+		}
+		<-stockfish.Ready
 
 		for ms := range strings.SplitSeq(game.Moves, " ") {
 			var extendedMoveString string
