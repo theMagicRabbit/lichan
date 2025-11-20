@@ -50,12 +50,12 @@ func InitStockfish() (proc *StockfishProc, err error) {
 func (sp *StockfishProc) SetupGame(fen string) (err error) {
 	var command string
 	if fen == standardStartingFEN {
-		command = "position startpos\n"
+		command = "position startpos"
 	} else {
-		command = fmt.Sprintf("position fen %s\n", fen)
+		command = fmt.Sprintf("position fen %s", fen)
 	}
 	sp.Moves = fmt.Sprintf("%s moves", command)
-	_, err = sp.Stdin.Write([]byte(command))
+	_, err = sp.Stdin.Write([]byte(command + "\n"))
 	if err != nil {
 		return
 	}
