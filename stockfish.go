@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -25,6 +26,8 @@ type StockfishProc struct {
 	Bestmove chan string
 	Moves    string
 }
+
+var extendedMoveRe *regexp.Regexp = regexp.MustCompile(`([a-h][1-8]){2}[qrbn]?`)
 
 func InitStockfish() (proc *StockfishProc, err error) {
 	proc = &StockfishProc{
@@ -134,4 +137,14 @@ func (sp *StockfishProc) ProcessOutput() {
 			fmt.Println(tokens)
 		}
 	}
+}
+
+func GetPVMoves(PV []string) (moves []string, err error) {
+	for i, token := range PV {
+		if extendedMoveRe.MatchString(token) {
+			moves = PV[i:]
+			break
+		}
+	}
+	return
 }

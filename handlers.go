@@ -157,7 +157,8 @@ func (s *state) handlerAnalyze(username string) error {
 			moveInfo := stockfish.Info.Value
 			stockfish.Info.Mu.Unlock()
 
-			fmt.Println("Best move:", bestmove, moveInfo)
+			pv, _ := GetPVMoves(moveInfo)
+			fmt.Println("Best move:", bestmove, "PV:", pv)
 		}
 
 		// Write output to processed file
