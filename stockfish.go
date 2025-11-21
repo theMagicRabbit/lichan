@@ -7,24 +7,35 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
 
 type StockfishProc struct {
-	Cmd *exec.Cmd
-	Stdin io.WriteCloser
+	Cmd    *exec.Cmd
+	Stdin  io.WriteCloser
 	Stdout io.ReadCloser
 	Stderr io.ReadCloser
-	Ready chan bool
-	Moves string
+	Info   struct {
+		Mu    *sync.Mutex
+		Value []string
+	}
+	Ready    chan bool
+	Bestmove chan string
+	Moves    string
 }
-
-
 
 func InitStockfish() (proc *StockfishProc, err error) {
 	proc = &StockfishProc{
-		Cmd: exec.CommandContext(context.Background(), "stockfish"),
-		Ready: make(chan bool),
+		Cmd:      exec.CommandContext(context.Background(), "stockfish"),
+		Ready:    make(chan bool),
+		Bestmove: make(chan string),
+		Info: struct {
+			Mu    *sync.Mutex
+			Value []string
+		}{
+			Mu: &sync.Mutex{},
+		},
 	}
 
 	stdin, err := proc.Cmd.StdinPipe()
@@ -110,8 +121,11 @@ func (sp *StockfishProc) ProcessOutput() {
 		case "uciok", "readyok":
 			sp.Ready <- true
 		case "bestmove":
-			fmt.Println("Stockfish best move:", tokens[1])
-			sp.Ready <- true
+			sp.Bestmove <- tokens[1]
+		case "info":
+			sp.Info.Mu.Lock()
+			sp.Info.Value = tokens
+			sp.Info.Mu.Unlock()
 		default:
 			fmt.Println(tokens)
 		}

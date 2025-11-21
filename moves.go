@@ -92,8 +92,8 @@ func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (*GameSt
 			targetFile := move.Target[0]
 			enPassantSquare := string(targetFile) + string(targetRank)
 			if targetPawn, exists := nextState.Pieces[enPassantSquare]; exists &&
-			targetPawn.PieceType == Pawn &&
-			targetPawn.PlayerColor != movedPiece.PlayerColor {
+				targetPawn.PieceType == Pawn &&
+				targetPawn.PlayerColor != movedPiece.PlayerColor {
 				delete(nextState.Pieces, enPassantSquare)
 			} else {
 				return nil, "", fmt.Errorf("Invalid capture to %v attempted\n", move.Target)

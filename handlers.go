@@ -129,7 +129,6 @@ func (s *state) handlerAnalyze(username string) error {
 		}
 		<-stockfish.Ready
 
-
 		err = stockfish.SetupGame(game.InitalFEN)
 		if err != nil {
 			log.Printf("Game setup failed: %v\n", err)
@@ -152,7 +151,13 @@ func (s *state) handlerAnalyze(username string) error {
 				break
 			}
 			stockfish.SearchMove(extendedMoveString)
-			<-stockfish.Ready
+			bestmove := <-stockfish.Bestmove
+
+			stockfish.Info.Mu.Lock()
+			moveInfo := stockfish.Info.Value
+			stockfish.Info.Mu.Unlock()
+
+			fmt.Println("Best move:", bestmove, moveInfo)
 		}
 
 		// Write output to processed file
