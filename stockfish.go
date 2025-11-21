@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -123,6 +124,9 @@ func (sp *StockfishProc) ProcessOutput() {
 		case "bestmove":
 			sp.Bestmove <- tokens[1]
 		case "info":
+			if slices.Contains(tokens, "currmovenumber") {
+				break
+			}
 			sp.Info.Mu.Lock()
 			sp.Info.Value = tokens
 			sp.Info.Mu.Unlock()
