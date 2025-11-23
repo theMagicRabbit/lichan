@@ -6,6 +6,16 @@ import (
 	"strings"
 )
 
+func (gs *GameState) ExtendedToStandard(extendedMove string) (move string, err error) {
+	if inputLen := len(extendedMove); !(inputLen == 4 || inputLen == 5) {
+		err = fmt.Errorf("Invalid move length.\n")
+		return
+	}
+	startSquare, endSquare := extendedMove[:2], extendedMove[2:4]
+	
+	return
+}
+
 func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (*GameState, string, error) {
 	move, err := ParseMoveString(strings.TrimSpace(ms))
 	if err != nil {
