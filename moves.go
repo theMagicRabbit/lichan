@@ -6,12 +6,40 @@ import (
 	"strings"
 )
 
-func (gs *GameState) ExtendedToStandard(extendedMove string) (move string, err error) {
+func (gs *GameState) ExtendedToStandard(extendedMove string) (move *Move, err error) {
 	if inputLen := len(extendedMove); !(inputLen == 4 || inputLen == 5) {
 		err = fmt.Errorf("Invalid move length.\n")
 		return
 	}
+
+	move = &Move{}
+
 	startSquare, endSquare := extendedMove[:2], extendedMove[2:4]
+
+	movedPiece, ok := gs.Pieces[startSquare]
+	if !ok {
+		err = fmt.Errorf("No piece found on %s\n", startSquare)
+		return
+	}
+
+	move.Target = endSquare
+	move.PieceType = movedPiece.PieceType
+
+	if len(extendedMove) == 5 {
+		switch string(extendedMove[4]) {
+		case "q":
+			move.PromoteTo = Queen
+		case "r":
+			move.PromoteTo = Rook
+		case "b":
+			move.PromoteTo = Bishop
+		case "n":
+			move.PromoteTo = Knight
+		default:
+			err = fmt.Errorf("Invalid promotion: %v\n", extendedMove[4])
+			return
+		}
+	}
 	
 	return
 }
