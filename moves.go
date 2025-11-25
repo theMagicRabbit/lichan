@@ -6,6 +6,14 @@ import (
 	"strings"
 )
 
+//type Move struct {
+//	PieceType, PromoteTo  PieceType
+//	Target, Discriminator string
+//	IsCheck, IsCheckmate,
+//	IsCapture, IsLongCastle,
+//	IsShortCastle bool
+//}
+
 func (gs *GameState) ExtendedToStandard(extendedMove string) (move *Move, err error) {
 	if inputLen := len(extendedMove); !(inputLen == 4 || inputLen == 5) {
 		err = fmt.Errorf("Invalid move length.\n")
@@ -21,6 +29,8 @@ func (gs *GameState) ExtendedToStandard(extendedMove string) (move *Move, err er
 		err = fmt.Errorf("No piece found on %s\n", startSquare)
 		return
 	}
+
+	movedPiece.Square = endSquare
 
 	move.Target = endSquare
 	move.PieceType = movedPiece.PieceType
@@ -39,8 +49,20 @@ func (gs *GameState) ExtendedToStandard(extendedMove string) (move *Move, err er
 			err = fmt.Errorf("Invalid promotion: %v\n", extendedMove[4])
 			return
 		}
+		movedPiece.PieceType = move.PromoteTo
 	}
+
+	newState := *gs
+	delete(newState.Pieces, startSquare)
+	newState.Pieces[endSquare] = movedPiece
+
+	_, isCapture := gs.Pieces[endSquare]
+	move.IsCapture = isCapture
 	
+	return
+}
+
+func (gs *GameState) ApplyAndTranslateExtendedMove() (newGameState *GameState) {
 	return
 }
 
