@@ -58,8 +58,29 @@ func (gs *GameState) ExtendedToStandard(extendedMove string) (move *Move, err er
 
 	_, isCapture := gs.Pieces[endSquare]
 	move.IsCapture = isCapture
+
+	move.IsCheck = newState.IsGivingCheck(movedPiece.PlayerColor)
 	
 	return
+}
+
+func (gs *GameState) IsGivingCheck(color PlayerColor) bool {
+	for _, piece := range gs.Pieces {
+		if piece.PlayerColor == color {
+			validMoves, err := gs.calculatePossibleMoves(piece)
+			if err != nil {
+				continue
+			}
+			for _, s := range validMoves {
+				if p, exists := gs.Pieces[s]; exists {
+					if p.PieceType == King && p.PlayerColor != color {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 func (gs *GameState) ApplyAndTranslateExtendedMove() (newGameState *GameState) {
