@@ -85,7 +85,7 @@ func (gs *GameState) IsCheckmated(kingSqare string) (isCheckmate bool, err error
 	}
 
 	var kingCanMove bool = false
-	var canCapture bool
+	var canCapture bool = true
 	var canBlock bool
 
 	kingMoves, err := gs.calculatePossibleMoves(king)
@@ -94,13 +94,24 @@ func (gs *GameState) IsCheckmated(kingSqare string) (isCheckmate bool, err error
 	}
 	
 	var opponentMoves []string
+	var checkingPiece []piece
+	var ownPiecesMoves []string
 	for _, piece := range gs.Pieces {
 		if piece.PlayerColor == king.PlayerColor {
-			continue
+			if possibleMoves, errMoves := gs.calculatePossibleMoves(piece); errMoves != nil {
+				continue
+			} else {
+				ownPiecesMoves = append(ownPiecesMoves, possibleMoves...)
+				continue
+			}
 		}
 		pieceMoves, moveErr := gs.calculatePossibleMoves(piece)
 		if moveErr != nil {
 			continue
+		}
+
+		if slices.Contains(pieceMoves, king.Square) {
+			checkingPiece = append(checkingPiece, piece)
 		}
 
 		opponentMoves = append(opponentMoves, pieceMoves...)
@@ -110,6 +121,12 @@ func (gs *GameState) IsCheckmated(kingSqare string) (isCheckmate bool, err error
 		if !slices.Contains(opponentMoves, km) {
 			kingCanMove = true
 			break
+		}
+	}
+
+	for _, cp := range checkingPiece {
+		if !slices.Contains(ownPiecesMoves, cp.Square) {
+			canCapture = false
 		}
 	}
 
