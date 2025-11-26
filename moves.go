@@ -59,12 +59,65 @@ func (gs *GameState) ExtendedToStandard(extendedMove string) (move *Move, err er
 	_, isCapture := gs.Pieces[endSquare]
 	move.IsCapture = isCapture
 
-	move.IsCheck = newState.IsGivingCheck(movedPiece.PlayerColor)
+	var kingSquare string
+	move.IsCheck, kingSquare = newState.IsGivingCheck(movedPiece.PlayerColor)
+	
+	if move.IsCheck {
+		move.IsCheckmate, err = gs.IsCheckmated(kingSquare)
+		if move.IsCheckmate {
+			move.IsCheck = false
+		}
+	}
 	
 	return
 }
 
-func (gs *GameState) IsGivingCheck(color PlayerColor) bool {
+func (gs *GameState) IsCheckmated(kingSqare string) (isCheckmate bool, err error) {
+	king, ok := gs.Pieces[kingSqare]
+	if !ok {
+		err = fmt.Errorf("No piece found found on %s\n", kingSqare) 
+		return
+	}
+
+	if king.PieceType != King {
+		err = fmt.Errorf("No king found\n")
+		return
+	}
+
+	var kingCanMove bool = false
+	var canCapture bool
+	var canBlock bool
+
+	kingMoves, err := gs.calculatePossibleMoves(king)
+	if err != nil {
+		return
+	}
+	
+	var opponentMoves []string
+	for _, piece := range gs.Pieces {
+		if piece.PlayerColor == king.PlayerColor {
+			continue
+		}
+		pieceMoves, moveErr := gs.calculatePossibleMoves(piece)
+		if moveErr != nil {
+			continue
+		}
+
+		opponentMoves = append(opponentMoves, pieceMoves...)
+	}
+
+	for _, km := range kingMoves {
+		if !slices.Contains(opponentMoves, km) {
+			kingCanMove = true
+			break
+		}
+	}
+
+	isCheckmate = !(kingCanMove || canCapture || canBlock)
+	return
+}
+
+func (gs *GameState) IsGivingCheck(color PlayerColor) (bool, string) {
 	for _, piece := range gs.Pieces {
 		if piece.PlayerColor == color {
 			validMoves, err := gs.calculatePossibleMoves(piece)
@@ -74,13 +127,13 @@ func (gs *GameState) IsGivingCheck(color PlayerColor) bool {
 			for _, s := range validMoves {
 				if p, exists := gs.Pieces[s]; exists {
 					if p.PieceType == King && p.PlayerColor != color {
-						return true
+						return true, p.Square
 					}
 				}
 			}
 		}
 	}
-	return false
+	return false, ""
 }
 
 func (gs *GameState) ApplyAndTranslateExtendedMove() (newGameState *GameState) {
