@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+
 //type Move struct {
 //	PieceType, PromoteTo  PieceType
 //	Target, Discriminator string
@@ -86,7 +87,7 @@ func (gs *GameState) IsCheckmated(kingSqare string) (isCheckmate bool, err error
 
 	var kingCanMove bool = false
 	var canCapture bool = true
-	var canBlock bool
+	var canBlock bool = false
 
 	kingMoves, err := gs.calculatePossibleMoves(king)
 	if err != nil {
@@ -128,7 +129,26 @@ func (gs *GameState) IsCheckmated(kingSqare string) (isCheckmate bool, err error
 		if !slices.Contains(ownPiecesMoves, cp.Square) {
 			canCapture = false
 		}
+
+		if len(checkingPiece) != 1 {
+			continue
+		}
+		if cp.PieceType == Queen || cp.PieceType == Rook || cp.PieceType == Bishop {
+			var pathToKing []string
+			pathToKing, err = gs.calcPathToKing(cp, king)
+			if err != nil {
+				return
+			}
+
+			for _, ownMove := range ownPiecesMoves {
+				if slices.Contains(pathToKing, ownMove) {
+					canBlock = true
+					break
+				}
+			}
+		}
 	}
+
 
 	isCheckmate = !(kingCanMove || canCapture || canBlock)
 	return
@@ -329,6 +349,162 @@ func (gs *GameState) calculatePossibleMoves(p piece) (squares []string, err erro
 		calcFunc = gs.calcPawnMoves
 	}
 	squares = calcFunc(rank, file, p)
+	return
+}
+
+func (gs *GameState) calcPathToKing(p piece, k piece) (pathToKing []string, err error) {
+	rank := rune(p.Square[1])
+	file := rune(p.Square[0])
+	square := p.Square
+	if !squareRE.MatchString(square) {
+		err = fmt.Errorf("Not a valid square: %v\n", square)
+		return
+	}
+	if _, ok := IsValidPieceType[p.PieceType]; !ok {
+		err = fmt.Errorf("Not a valid piece: %v\n", p.PieceType)
+		return
+	}
+	var calcFunc func(rune, rune, piece, piece) []string
+	switch p.PieceType {
+	case Bishop:
+		calcFunc = gs.calcBishopPathToKing
+	case Rook:
+		calcFunc = gs.calcRookPathToKing
+	case Queen:
+		calcFunc = gs.calcQueenPathToKing
+	default:
+		err = fmt.Errorf("Invalid piece type: %v\n", p.PieceType)
+		return
+	}
+	pathToKing = calcFunc(rank, file, p, k)
+	return
+}
+
+func (gs *GameState) calcMovesUpRight(rank, file rune, p piece) (squares []string) {
+	for r, f := rank+1, file+1; r <= '8' && f <= 'h'; r, f = r+1, f+1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcMovesUpLeft(rank, file rune, p piece) (squares []string) {
+	for r, f := rank+1, file-1; r <= '8' && f >= 'a'; r, f = r+1, f-1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcMovesDownRight(rank, file rune, p piece) (squares []string) {
+	for r, f := rank-1, file+1; r >= '1' && f <= 'h'; r, f = r-1, f+1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcMovesDownLeft(rank, file rune, p piece) (squares []string) {
+	for r, f := rank-1, file-1; r >= '1' && f >= 'a'; r, f = r-1, f-1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcMovesLeft(rank, file rune, p piece) (squares []string) {
+	for r, f := rank, file-1; f >= 'a'; f-- {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if !isValid {
+			break
+		}
+		squares = append(squares, canidateSquare)
+	}
+	return
+}
+
+func (gs *GameState) calcMovesUp(rank, file rune, p piece) (squares []string) {
+	for r, f := rank+1, file; r <= '8'; r++ {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if !isValid {
+			break
+		}
+		squares = append(squares, canidateSquare)
+	}
+	return
+}
+
+func (gs *GameState) calcMovesRight(rank, file rune, p piece) (squares []string) {
+	for r, f := rank, file+1; f <= 'h'; f++ {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if !isValid {
+			break
+		}
+		squares = append(squares, canidateSquare)
+	}
+	return
+}
+
+func (gs *GameState) calcMovesDown(rank, file rune, p piece) (squares []string) {
+	for r, f := rank-1, file; r >= '1'; r-- {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if !isValid {
+			break
+		}
+		squares = append(squares, canidateSquare)
+	}
+	return
+}
+
+func (gs *GameState) calcBishopPathToKing(rank, file rune, p, k piece) (pathToKing []string) {
+	var bishopMoves []func(rune, rune, piece) []string = []func(rune, rune, piece) []string {
+		gs.calcMovesUpLeft,
+		gs.calcMovesUpRight,
+		gs.calcMovesDownLeft,
+		gs.calcMovesDownRight,
+	}
+	for _, f := range bishopMoves {
+		squares := f(rank, file, p)
+
+		if slices.Contains(squares, k.Square) {
+			pathToKing = squares
+			break
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcRookPathToKing(rank, file rune, p, k piece) (pathToKing []string) {
+	var rookMoves []func(rune, rune, piece) []string = []func(rune, rune, piece) []string {
+		gs.calcMovesLeft,
+		gs.calcMovesRight,
+		gs.calcMovesDown,
+		gs.calcMovesUp,
+	}
+	for _, f := range rookMoves {
+		squares := f(rank, file, p)
+
+		if slices.Contains(squares, k.Square) {
+			pathToKing = squares
+			break
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcQueenPathToKing(rank, file rune, p, k piece) (pathToKing []string) {
+	pathToKing = gs.calcBishopPathToKing(rank, file, p, k)
+	if len(pathToKing) == 0 {
+		pathToKing = gs.calcRookPathToKing(rank, file, p, k)
+	}
 	return
 }
 
