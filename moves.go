@@ -6,15 +6,6 @@ import (
 	"strings"
 )
 
-
-//type Move struct {
-//	PieceType, PromoteTo  PieceType
-//	Target, Discriminator string
-//	IsCheck, IsCheckmate,
-//	IsCapture, IsLongCastle,
-//	IsShortCastle bool
-//}
-
 func (gs *GameState) ExtendedStringToMove(extendedMove string) (move *Move, err error) {
 	if inputLen := len(extendedMove); !(inputLen == 4 || inputLen == 5) {
 		err = fmt.Errorf("Invalid move length.\n")
@@ -73,7 +64,7 @@ func (gs *GameState) ExtendedStringToMove(extendedMove string) (move *Move, err 
 
 	var kingSquare string
 	move.IsCheck, kingSquare = newState.IsGivingCheck(movedPiece.PlayerColor)
-	
+
 	if move.IsCheck {
 		move.IsCheckmate, err = gs.IsCheckmated(kingSquare)
 		if move.IsCheckmate {
@@ -122,7 +113,7 @@ func (gs *GameState) ExtendedStringToMove(extendedMove string) (move *Move, err 
 func (gs *GameState) IsCheckmated(kingSqare string) (isCheckmate bool, err error) {
 	king, ok := gs.Pieces[kingSqare]
 	if !ok {
-		err = fmt.Errorf("No piece found found on %s\n", kingSqare) 
+		err = fmt.Errorf("No piece found found on %s\n", kingSqare)
 		return
 	}
 
@@ -139,7 +130,7 @@ func (gs *GameState) IsCheckmated(kingSqare string) (isCheckmate bool, err error
 	if err != nil {
 		return
 	}
-	
+
 	var opponentMoves []string
 	var checkingPiece []piece
 	var ownPiecesMoves []string
@@ -194,7 +185,6 @@ func (gs *GameState) IsCheckmated(kingSqare string) (isCheckmate bool, err error
 			}
 		}
 	}
-
 
 	isCheckmate = !(kingCanMove || canCapture || canBlock)
 	return
@@ -511,7 +501,7 @@ func (gs *GameState) calcMovesDown(rank, file rune, p piece) (squares []string) 
 }
 
 func (gs *GameState) calcBishopPathToKing(rank, file rune, p, k piece) (pathToKing []string) {
-	var bishopMoves []func(rune, rune, piece) []string = []func(rune, rune, piece) []string {
+	var bishopMoves []func(rune, rune, piece) []string = []func(rune, rune, piece) []string{
 		gs.calcMovesUpLeft,
 		gs.calcMovesUpRight,
 		gs.calcMovesDownLeft,
@@ -529,7 +519,7 @@ func (gs *GameState) calcBishopPathToKing(rank, file rune, p, k piece) (pathToKi
 }
 
 func (gs *GameState) calcRookPathToKing(rank, file rune, p, k piece) (pathToKing []string) {
-	var rookMoves []func(rune, rune, piece) []string = []func(rune, rune, piece) []string {
+	var rookMoves []func(rune, rune, piece) []string = []func(rune, rune, piece) []string{
 		gs.calcMovesLeft,
 		gs.calcMovesRight,
 		gs.calcMovesDown,
