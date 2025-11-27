@@ -15,7 +15,7 @@ import (
 //	IsShortCastle bool
 //}
 
-func (gs *GameState) ExtendedToStandard(extendedMove string) (move *Move, err error) {
+func (gs *GameState) ExtendedStringToMove(extendedMove string) (move *Move, err error) {
 	if inputLen := len(extendedMove); !(inputLen == 4 || inputLen == 5) {
 		err = fmt.Errorf("Invalid move length.\n")
 		return
@@ -35,6 +35,17 @@ func (gs *GameState) ExtendedToStandard(extendedMove string) (move *Move, err er
 
 	move.Target = endSquare
 	move.PieceType = movedPiece.PieceType
+
+	var similarPieces []piece
+	for s, p := range gs.Pieces {
+		if s == startSquare {
+			continue
+		}
+
+		if p.PlayerColor == movedPiece.PlayerColor && p.PieceType == move.PieceType {
+			similarPieces = append(similarPieces, p)
+		}
+	}
 
 	if len(extendedMove) == 5 {
 		switch string(extendedMove[4]) {
@@ -79,7 +90,32 @@ func (gs *GameState) ExtendedToStandard(extendedMove string) (move *Move, err er
 			move.IsLongCastle = true
 		}
 	}
-	
+
+	if move.PieceType == Pawn && move.IsCapture {
+		move.Discriminator = string(startSquare[0])
+	}
+
+	var ambigious []string
+	for _, p := range similarPieces {
+		possibleMoves, _ := gs.calculatePossibleMoves(p)
+		if slices.Contains(possibleMoves, endSquare) {
+			ambigious = append(ambigious, p.Square)
+		}
+	}
+	switch len(ambigious) {
+	case 0:
+	case 1:
+		f1, r1 := startSquare[0], startSquare[1]
+		f2 := ambigious[0][0]
+		if f1 != f2 {
+			move.Discriminator = string(f1)
+		} else {
+			move.Discriminator = string(r1)
+		}
+	default:
+		move.Discriminator = startSquare
+	}
+
 	return
 }
 
