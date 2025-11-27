@@ -69,6 +69,16 @@ func (gs *GameState) ExtendedToStandard(extendedMove string) (move *Move, err er
 			move.IsCheck = false
 		}
 	}
+
+	if move.PieceType == King {
+		if extendedMove == "e1g1" || extendedMove == "e8g8" {
+			move.IsShortCastle = true
+		}
+
+		if extendedMove == "e1c1" || extendedMove == "e8c8" {
+			move.IsLongCastle = true
+		}
+	}
 	
 	return
 }
