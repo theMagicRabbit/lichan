@@ -209,7 +209,189 @@ func (gs *GameState) IsGivingCheck(color PlayerColor) (bool, string) {
 	return false, ""
 }
 
-func (gs *GameState) ApplyAndTranslateExtendedMove() (newGameState *GameState) {
+func (m *Move) MoveToStandardNotation() (moveString string) {
+	var pieceAbb string
+	switch m.PieceType {
+	case King:
+		pieceAbb = "K"
+	case Queen:
+		pieceAbb = "Q"
+	case Rook:
+		pieceAbb = "R"
+	case Bishop:
+		pieceAbb = "B"
+	case Knight:
+		pieceAbb = "N"
+	case Pawn:
+		pieceAbb = ""
+	}
+
+	var capture string = ""
+	if m.IsCapture {
+		capture = "x"
+	}
+
+	var promotion string = ""
+	switch m.PromoteTo {
+	case Queen:
+		promotion = "=" + "Q"
+	case Rook:
+		promotion = "=" + "R"
+	case Bishop:
+		promotion = "=" + "B"
+	case Knight:
+		promotion = "=" + "N"
+	default:
+		promotion = ""
+	}
+
+	var checkSymbol string
+	if m.IsCheck {
+		checkSymbol = "+"
+	} else if m.IsCheckmate {
+		checkSymbol = "#"
+	} else {
+		checkSymbol = ""
+	}
+
+	moveString = pieceAbb + m.Discriminator + capture + m.Target + promotion + checkSymbol
+	return
+}
+
+func (gs *GameState) AppyMove(move *Move, turn PlayerColor) (newGameState *GameState, err error) {
+	newGameState = &GameState{}
+	if move.IsLongCastle && turn == Black {
+		move.Target = "c8"
+	}
+	if move.IsLongCastle && turn == White {
+		move.Target = "c1"
+	}
+	if move.IsShortCastle && turn == Black {
+		move.Target = "g8"
+	}
+	if move.IsShortCastle && turn == White {
+		move.Target = "g1"
+	}
+
+	var sourceSquare string
+	if len(move.Discriminator) == 2 {
+		sourceSquare = move.Discriminator
+	} else {
+		for _, boardPiece := range gs.Pieces {
+			var isValid bool
+			if !strings.Contains(boardPiece.Square, move.Discriminator) {
+				continue
+			}
+			if boardPiece.PlayerColor != turn {
+				continue
+			}
+			if boardPiece.PieceType != move.PieceType {
+				continue
+			}
+			if isValid, err = gs.isValidMove(move, boardPiece); err != nil {
+				return
+			} else if !isValid {
+				continue
+			}
+			sourceSquare = boardPiece.Square
+			break
+		}
+	}
+
+	var nextTurn PlayerColor
+	if gs.PlayerTurn == White {
+		nextTurn = Black
+	} else {
+		nextTurn = White
+	}
+
+	newGameState.PlayerTurn = nextTurn
+	newGameState.Pieces = gs.Pieces
+
+	movedPiece := newGameState.Pieces[sourceSquare]
+	movedPiece.Square = move.Target
+
+	var promoteTo string
+	if move.PromoteTo != "" {
+		movedPiece.PieceType = move.PromoteTo
+		switch move.PromoteTo {
+		case Queen:
+			promoteTo = "q"
+		case Rook:
+			promoteTo = "r"
+		case Bishop:
+			promoteTo = "b"
+		case Knight:
+			promoteTo = "n"
+		}
+	}
+
+	if move.IsCapture {
+		if _, targetExists := newGameState.Pieces[move.Target]; targetExists {
+			delete(newGameState.Pieces, move.Target)
+		} else if movedPiece.PieceType != Pawn {
+			err = fmt.Errorf("No piece found on target square: %v\n", move.Target)
+			return
+		} else {
+			targetRank := string(sourceSquare[1])
+			if !(turn == Black && "4" == targetRank) && !(turn == White && "5" == targetRank) {
+				err = fmt.Errorf("Invalid capture to %v attempted\n", move.Target)
+				return
+			}
+
+			targetFile := move.Target[0]
+			enPassantSquare := string(targetFile) + string(targetRank)
+			if targetPawn, exists := newGameState.Pieces[enPassantSquare]; exists &&
+				targetPawn.PieceType == Pawn &&
+				targetPawn.PlayerColor != movedPiece.PlayerColor {
+				delete(newGameState.Pieces, enPassantSquare)
+			} else {
+				err = fmt.Errorf("Invalid capture to %v attempted\n", move.Target)
+				return
+			}
+		}
+	}
+
+	if move.IsLongCastle {
+		var rookSource string
+		var rookDest string
+		if turn == Black {
+			rookSource = "a8"
+			rookDest = "d8"
+		} else {
+			rookSource = "a1"
+			rookDest = "d1"
+		}
+		qRook := newGameState.Pieces[rookSource]
+		qRook.Square = rookDest
+		delete(newGameState.Pieces, rookSource)
+		newGameState.Pieces[rookDest] = qRook
+	}
+
+	if move.IsShortCastle {
+		var rookSource string
+		var rookDest string
+		if turn == Black {
+			rookSource = "h8"
+			rookDest = "f8"
+		} else {
+			rookSource = "h1"
+			rookDest = "f1"
+		}
+		kRook := newGameState.Pieces[rookSource]
+		kRook.Square = rookDest
+		delete(newGameState.Pieces, rookSource)
+		newGameState.Pieces[rookDest] = kRook
+	}
+
+	newGameState.Pieces[move.Target] = movedPiece
+	delete(newGameState.Pieces, sourceSquare)
+
+	extendedMove := sourceSquare + move.Target + promoteTo
+	if moveLen := len(extendedMove); !(moveLen == 4 || moveLen == 5) {
+		err = fmt.Errorf("Stockfish move is wrong length. source: %s; dest: %s\n", sourceSquare, move.Target)
+		return
+	}
 	return
 }
 
