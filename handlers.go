@@ -166,7 +166,38 @@ func (s *state) handlerAnalyze(username string) error {
 			stockfish.Info.Mu.Unlock()
 
 			pv, _ := GetPVMoves(moveInfo)
-			fmt.Println("Best move:", bestmove, "PV:", pv)
+			var pvPGNMoves string
+			var pvMoveCounter int = turnCounter
+			var pvGameState *GameState = &GameState{}
+			*pvGameState = *gs
+
+			for _, pvMoveString := range pv {
+				if pvMoveCounter == turnCounter {
+					pvPGNMoves = "{"
+				}
+				pvMove, err := pvGameState.ExtendedStringToMove(pvMoveString)
+				if err != nil {
+					log.Printf("Unable to parse extended PV move: %s\n", err)
+					break
+				}
+				standardMove := pvMove.MoveToStandardNotation()
+				if pvGameState.PlayerTurn == Black {
+					pvPGNMoves = fmt.Sprintf("%s %s", pvPGNMoves, standardMove)
+					pvMoveCounter++
+				} else {
+					pvPGNMoves = fmt.Sprintf("%s %d. %s", pvPGNMoves, pvMoveCounter, standardMove)
+				}
+				pvGameState, err = pvGameState.AppyMove(pvMove, pvGameState.PlayerTurn)
+				if err != nil {
+					log.Printf("Unable to apply move: %s\n", err)
+				}
+			}
+
+			if pvPGNMoves != "" {
+				pvPGNMoves = pvPGNMoves + " }"
+				analyzedMoves = analyzedMoves + " " + pvPGNMoves
+			}
+			fmt.Println("Best move:", bestmove, "analyzed move string:", analyzedMoves)
 		}
 
 		// Write output to processed file
