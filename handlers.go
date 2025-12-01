@@ -139,13 +139,6 @@ func (s *state) handlerAnalyze(username string) error {
 		var analyzedMoves string
 		var turnCounter int = 1
 		for ms := range strings.SplitSeq(game.Moves, " ") {
-			if gs.PlayerTurn == Black {
-				analyzedMoves = fmt.Sprintf("%s %s", analyzedMoves, ms)
-				turnCounter++
-			} else {
-				analyzedMoves = fmt.Sprintf("%s %d. %s", analyzedMoves, turnCounter, ms)
-			}
-			var extendedMoveString string
 			if gs == nil {
 				gs, err = NewGameState(game.InitalFEN)
 				if err != nil {
@@ -153,6 +146,13 @@ func (s *state) handlerAnalyze(username string) error {
 					break
 				}
 			}
+			if gs.PlayerTurn == Black {
+				analyzedMoves = fmt.Sprintf("%s %s", analyzedMoves, ms)
+				turnCounter++
+			} else {
+				analyzedMoves = fmt.Sprintf("%s %d. %s", analyzedMoves, turnCounter, ms)
+			}
+			var extendedMoveString string
 			gs, extendedMoveString, err = gs.ApplyAndTranslateMove(ms, gs.PlayerTurn)
 			if err != nil {
 				log.Printf("%s | Unable to parse move %s: %v\n", game.ID, ms, err)
