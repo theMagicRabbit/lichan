@@ -146,12 +146,14 @@ func (s *state) handlerAnalyze(username string) error {
 					break
 				}
 			}
+
 			if gs.PlayerTurn == Black {
 				analyzedMoves = fmt.Sprintf("%s %s", analyzedMoves, ms)
 				turnCounter++
 			} else {
 				analyzedMoves = fmt.Sprintf("%s %d. %s", analyzedMoves, turnCounter, ms)
 			}
+
 			var extendedMoveString string
 			gs, extendedMoveString, err = gs.ApplyAndTranslateMove(ms, gs.PlayerTurn)
 			if err != nil {
@@ -187,7 +189,7 @@ func (s *state) handlerAnalyze(username string) error {
 				} else {
 					pvPGNMoves = fmt.Sprintf("%s %d. %s", pvPGNMoves, pvMoveCounter, standardMove)
 				}
-				pvGameState, err = pvGameState.AppyMove(pvMove, pvGameState.PlayerTurn)
+				pvGameState, _, err = pvGameState.AppyMove(pvMove, pvGameState.PlayerTurn)
 				if err != nil {
 					log.Printf("Unable to apply move: %s\n", err)
 				}
