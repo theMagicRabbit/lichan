@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -55,7 +56,12 @@ func (gs *GameState) ExtendedStringToMove(extendedMove string) (move *Move, err 
 		movedPiece.PieceType = move.PromoteTo
 	}
 
-	newState := *gs
+	var newState *GameState = &GameState{
+		PlayerTurn: gs.PlayerTurn,
+	}
+	newState.Pieces = make(map[string]piece)
+	maps.Copy(gs.Pieces, newState.Pieces)
+
 	delete(newState.Pieces, startSquare)
 	newState.Pieces[endSquare] = movedPiece
 
