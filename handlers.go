@@ -174,7 +174,8 @@ func (s *state) handlerAnalyze(username string) error {
 			var pvGameState *GameState = &GameState{
 				PlayerTurn: gs.PlayerTurn,
 			}
-			maps.Copy(gs.Pieces, pvGameState.Pieces)
+			pvGameState.Pieces = make(map[string]piece)
+			maps.Copy(pvGameState.Pieces, gs.Pieces)
 
 			for _, pvMoveString := range pv {
 				if pvMoveCounter == turnCounter {
