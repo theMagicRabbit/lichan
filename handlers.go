@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -170,8 +171,10 @@ func (s *state) handlerAnalyze(username string) error {
 			pv, _ := GetPVMoves(moveInfo)
 			var pvPGNMoves string
 			var pvMoveCounter int = turnCounter
-			var pvGameState *GameState = &GameState{}
-			*pvGameState = *gs
+			var pvGameState *GameState = &GameState{
+				PlayerTurn: gs.PlayerTurn,
+			}
+			maps.Copy(gs.Pieces, pvGameState.Pieces)
 
 			for _, pvMoveString := range pv {
 				if pvMoveCounter == turnCounter {

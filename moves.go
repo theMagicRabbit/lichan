@@ -60,7 +60,7 @@ func (gs *GameState) ExtendedStringToMove(extendedMove string) (move *Move, err 
 		PlayerTurn: gs.PlayerTurn,
 	}
 	newState.Pieces = make(map[string]piece)
-	maps.Copy(gs.Pieces, newState.Pieces)
+	maps.Copy(newState.Pieces, gs.Pieces)
 
 	delete(newState.Pieces, startSquare)
 	newState.Pieces[endSquare] = movedPiece
@@ -312,9 +312,14 @@ func (gs *GameState) AppyMove(move *Move, turn PlayerColor) (newGameState *GameS
 	}
 
 	newGameState.PlayerTurn = nextTurn
-	newGameState.Pieces = gs.Pieces
+	newGameState.Pieces = make(map[string]piece)
+	maps.Copy(newGameState.Pieces, gs.Pieces)
 
-	movedPiece := newGameState.Pieces[sourceSquare]
+	movedPiece, ok := newGameState.Pieces[sourceSquare]
+	if !ok {
+		err = fmt.Errorf("Piece not found\n")
+		return
+	}
 	movedPiece.Square = move.Target
 
 	var promoteTo string
