@@ -266,6 +266,18 @@ func (m *Move) MoveToStandardNotation() (moveString string) {
 
 func (gs *GameState) AppyMove(move *Move, turn PlayerColor) (newGameState *GameState, extendedMoveString string, err error) {
 	newGameState = &GameState{}
+	var nextTurn PlayerColor
+	switch gs.PlayerTurn {
+	case White:
+		nextTurn = Black
+	case Black:
+		nextTurn = White
+	default:
+		err = fmt.Errorf("Invalid turn color: %v\n", turn)
+		return
+	}
+	newGameState.PlayerTurn = nextTurn
+
 	if move.IsLongCastle && turn == Black {
 		move.Target = "c8"
 	}
@@ -309,14 +321,6 @@ func (gs *GameState) AppyMove(move *Move, turn PlayerColor) (newGameState *GameS
 		return
 	}
 
-	var nextTurn PlayerColor
-	if gs.PlayerTurn == White {
-		nextTurn = Black
-	} else {
-		nextTurn = White
-	}
-
-	newGameState.PlayerTurn = nextTurn
 	newGameState.Pieces = make(map[string]piece)
 	maps.Copy(newGameState.Pieces, gs.Pieces)
 
