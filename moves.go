@@ -304,6 +304,11 @@ func (gs *GameState) AppyMove(move *Move, turn PlayerColor) (newGameState *GameS
 		}
 	}
 
+	if sourceSquare == "" {
+		err = fmt.Errorf("Source square not found\n")
+		return
+	}
+
 	var nextTurn PlayerColor
 	if gs.PlayerTurn == White {
 		nextTurn = Black
