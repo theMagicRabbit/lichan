@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"log"
+	//"log"
 	"maps"
 	"slices"
 	"strings"
@@ -265,7 +265,8 @@ func (m *Move) MoveToStandardNotation() (moveString string) {
 	return
 }
 
-func (gs *GameState) PVMovesToStandard(pv []string, pvMoveCounter int, turn PlayerColor) (pgnMoves string) {
+func (gs *GameState) PVMovesToStandard(pv []string, pvMoveCounter int, turn PlayerColor) (pgnMoves string, err error) {
+	pgnMoves = "{"
 	var pvGameState *GameState = &GameState{
 		PlayerTurn: gs.PlayerTurn,
 		Pieces: make(map[string]piece),
@@ -275,7 +276,7 @@ func (gs *GameState) PVMovesToStandard(pv []string, pvMoveCounter int, turn Play
 	for _, pvMoveString := range pv {
 		pvMove, err := pvGameState.ExtendedStringToMove(pvMoveString)
 		if err != nil {
-			log.Printf("Unable to parse extended PV move: %s\n", err)
+			//log.Printf("Unable to parse extended PV move: %s\n", err)
 			break
 		}
 		standardMove := pvMove.MoveToStandardNotation()
@@ -287,10 +288,11 @@ func (gs *GameState) PVMovesToStandard(pv []string, pvMoveCounter int, turn Play
 		}
 		pvGameState, _, err = pvGameState.AppyMove(pvMove, pvGameState.PlayerTurn)
 		if err != nil {
-			log.Printf("Unable to apply move: %v\n", pvMove)
+			//log.Printf("Unable to apply move: %v\n", pvMove)
 			break
 		}
 	}
+	pgnMoves = fmt.Sprintf("%s }", pgnMoves)
 	return
 }
 

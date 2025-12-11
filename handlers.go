@@ -177,10 +177,14 @@ func (s *state) handlerAnalyze(username string) error {
 			pvGameState.Pieces = make(map[string]piece)
 			maps.Copy(pvGameState.Pieces, gs.Pieces)
 
-			pvPGNMoves = pvGameState.PVMovesToStandard(pv, pvMoveCounter, pvGameState.PlayerTurn)
+			pvPGNMoves, err = pvGameState.PVMovesToStandard(pv, pvMoveCounter, pvGameState.PlayerTurn)
+			if err != nil {
+				log.Printf("Unable to calculate PV string: %v\n", err)
+				break
+			}
+
 
 			if pvPGNMoves != "" {
-				pvPGNMoves = pvPGNMoves + " }"
 				analyzedMoves = analyzedMoves + " " + pvPGNMoves
 			}
 			fmt.Println("Best move:", bestmove, "analyzed move string:", analyzedMoves)
