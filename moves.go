@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"maps"
 	"slices"
 	"strings"
@@ -261,6 +262,35 @@ func (m *Move) MoveToStandardNotation() (moveString string) {
 	}
 
 	moveString = pieceAbb + m.Discriminator + capture + m.Target + promotion + checkSymbol
+	return
+}
+
+func (gs *GameState) PVMovesToStandard(pv []string, pvMoveCounter int, turn PlayerColor) (pgnMoves string) {
+	var pvGameState *GameState = &GameState{
+		PlayerTurn: gs.PlayerTurn,
+		Pieces: make(map[string]piece),
+	}
+	maps.Copy(pvGameState.Pieces, gs.Pieces)
+
+	for _, pvMoveString := range pv {
+		pvMove, err := pvGameState.ExtendedStringToMove(pvMoveString)
+		if err != nil {
+			log.Printf("Unable to parse extended PV move: %s\n", err)
+			break
+		}
+		standardMove := pvMove.MoveToStandardNotation()
+		if pvGameState.PlayerTurn == Black {
+			pgnMoves = fmt.Sprintf("%s %s", pgnMoves, standardMove)
+			pvMoveCounter++
+		} else {
+			pgnMoves = fmt.Sprintf("%s %d. %s", pgnMoves, pvMoveCounter, standardMove)
+		}
+		pvGameState, _, err = pvGameState.AppyMove(pvMove, pvGameState.PlayerTurn)
+		if err != nil {
+			log.Printf("Unable to apply move: %v\n", pvMove)
+			break
+		}
+	}
 	return
 }
 

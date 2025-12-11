@@ -177,27 +177,7 @@ func (s *state) handlerAnalyze(username string) error {
 			pvGameState.Pieces = make(map[string]piece)
 			maps.Copy(pvGameState.Pieces, gs.Pieces)
 
-			for _, pvMoveString := range pv {
-				if pvMoveCounter == turnCounter {
-					pvPGNMoves = "{"
-				}
-				pvMove, err := pvGameState.ExtendedStringToMove(pvMoveString)
-				if err != nil {
-					log.Printf("Unable to parse extended PV move: %s\n", err)
-					break
-				}
-				standardMove := pvMove.MoveToStandardNotation()
-				if pvGameState.PlayerTurn == Black {
-					pvPGNMoves = fmt.Sprintf("%s %s", pvPGNMoves, standardMove)
-					pvMoveCounter++
-				} else {
-					pvPGNMoves = fmt.Sprintf("%s %d. %s", pvPGNMoves, pvMoveCounter, standardMove)
-				}
-				pvGameState, _, err = pvGameState.AppyMove(pvMove, pvGameState.PlayerTurn)
-				if err != nil {
-					log.Printf("Unable to apply move: %s\n", err)
-				}
-			}
+			pvPGNMoves = pvGameState.PVMovesToStandard(pv, pvMoveCounter, pvGameState.PlayerTurn)
 
 			if pvPGNMoves != "" {
 				pvPGNMoves = pvPGNMoves + " }"
