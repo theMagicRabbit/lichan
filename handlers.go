@@ -173,8 +173,8 @@ func (s *state) handlerAnalyze(username string) error {
 			var pvMoveCounter int = turnCounter
 			var pvGameState *GameState = &GameState{
 				PlayerTurn: gs.PlayerTurn,
+				Pieces: make(map[string]piece),
 			}
-			pvGameState.Pieces = make(map[string]piece)
 			maps.Copy(pvGameState.Pieces, gs.Pieces)
 
 			pvPGNMoves, err = pvGameState.PVMovesToStandard(pv, pvMoveCounter, pvGameState.PlayerTurn)
