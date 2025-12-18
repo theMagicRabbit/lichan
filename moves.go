@@ -286,7 +286,7 @@ func (gs *GameState) PVMovesToStandard(pv []string, pvMoveCounter int, turn Play
 		} else {
 			pgnMoves = fmt.Sprintf("%s %d. %s", pgnMoves, pvMoveCounter, standardMove)
 		}
-		pvGameState, _, err = pvGameState.AppyMove(pvMove, pvGameState.PlayerTurn)
+		pvGameState, _, err = pvGameState.ApplyMove(pvMove, pvGameState.PlayerTurn)
 		if err != nil {
 			//log.Printf("Unable to apply move: %v\n", pvMove)
 			break
@@ -296,7 +296,7 @@ func (gs *GameState) PVMovesToStandard(pv []string, pvMoveCounter int, turn Play
 	return
 }
 
-func (gs *GameState) AppyMove(move *Move, turn PlayerColor) (newGameState *GameState, extendedMoveString string, err error) {
+func (gs *GameState) ApplyMove(move *Move, turn PlayerColor) (newGameState *GameState, extendedMoveString string, err error) {
 	newGameState = &GameState{}
 	var nextTurn PlayerColor
 	switch gs.PlayerTurn {
@@ -453,11 +453,20 @@ func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (nextSta
 		return
 	}
 
-	nextState, extendedMove, err = gs.AppyMove(move, gs.PlayerTurn)
+	nextState, extendedMove, err = gs.ApplyMove(move, gs.PlayerTurn)
 	if err != nil {
 		return
 	}
 
+	return
+}
+
+func (gs *GameState) Copy() (copyGS *GameState) {
+	copyGS = &GameState{
+		PlayerTurn: gs.PlayerTurn,
+		Pieces: make(map[string]piece),
+	}
+	maps.Copy(copyGS.Pieces, gs.Pieces)
 	return
 }
 
