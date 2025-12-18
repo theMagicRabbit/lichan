@@ -269,7 +269,7 @@ func (gs *GameState) PVMovesToStandard(pv []string, pvMoveCounter int, turn Play
 	pgnMoves = "{"
 	var pvGameState *GameState = &GameState{
 		PlayerTurn: gs.PlayerTurn,
-		Pieces: make(map[string]piece),
+		Pieces:     make(map[string]piece),
 	}
 	maps.Copy(pvGameState.Pieces, gs.Pieces)
 
@@ -296,39 +296,11 @@ func (gs *GameState) PVMovesToStandard(pv []string, pvMoveCounter int, turn Play
 	return
 }
 
-func (gs *GameState) ApplyMove(move *Move, turn PlayerColor) (newGameState *GameState, extendedMoveString string, err error) {
-	newGameState = &GameState{}
-	var nextTurn PlayerColor
-	switch gs.PlayerTurn {
-	case White:
-		nextTurn = Black
-	case Black:
-		nextTurn = White
-	default:
-		err = fmt.Errorf("Invalid turn color: %v\n", turn)
-		return
-	}
-	newGameState.PlayerTurn = nextTurn
-
-	if move.IsLongCastle && turn == Black {
-		move.Target = "c8"
-	}
-	if move.IsLongCastle && turn == White {
-		move.Target = "c1"
-	}
-	if move.IsShortCastle && turn == Black {
-		move.Target = "g8"
-	}
-	if move.IsShortCastle && turn == White {
-		move.Target = "g1"
-	}
-
-	var sourceSquare string
+func (gs *GameState) FindPossibleSquares(move *Move, turn PlayerColor) (squares []string) {
 	if len(move.Discriminator) == 2 {
-		sourceSquare = move.Discriminator
+		squares = append(squares, move.Discriminator)
 	} else {
 		for _, boardPiece := range gs.Pieces {
-			var isValid bool
 			if !strings.Contains(boardPiece.Square, move.Discriminator) {
 				continue
 			}
@@ -338,24 +310,26 @@ func (gs *GameState) ApplyMove(move *Move, turn PlayerColor) (newGameState *Game
 			if boardPiece.PieceType != move.PieceType {
 				continue
 			}
-			if isValid, err = gs.isValidMove(move, boardPiece); err != nil {
+			if isValid, err := gs.isValidMove(move, boardPiece); err != nil {
 				return
 			} else if !isValid {
 				continue
 			}
-			sourceSquare = boardPiece.Square
-			break
+			squares = append(squares, boardPiece.Square)
 		}
 	}
+	return
+}
 
+func (gs *GameState) movePiece(
+	move *Move, turn PlayerColor, sourceSquare string,
+) (newGameState *GameState, extendedMoveString string, err error) {
 	if sourceSquare == "" {
 		err = fmt.Errorf("Source square not found\n")
 		return
 	}
 
-	newGameState.Pieces = make(map[string]piece)
-	maps.Copy(newGameState.Pieces, gs.Pieces)
-
+	newGameState = gs.Copy()
 	movedPiece, ok := newGameState.Pieces[sourceSquare]
 	if !ok {
 		err = fmt.Errorf("Piece not found\n")
@@ -447,6 +421,50 @@ func (gs *GameState) ApplyMove(move *Move, turn PlayerColor) (newGameState *Game
 	return
 }
 
+func (gs *GameState) ApplyMove(move *Move, turn PlayerColor) (newGameState *GameState, extendedMoveString string, err error) {
+	var nextTurn PlayerColor
+	switch gs.PlayerTurn {
+	case White:
+		nextTurn = Black
+	case Black:
+		nextTurn = White
+	default:
+		err = fmt.Errorf("Invalid turn color: %v\n", turn)
+		return
+	}
+
+	newGameState = gs.Copy()
+	newGameState.PlayerTurn = nextTurn
+
+	if move.IsLongCastle && turn == Black {
+		move.Target = "c8"
+	}
+	if move.IsLongCastle && turn == White {
+		move.Target = "c1"
+	}
+	if move.IsShortCastle && turn == Black {
+		move.Target = "g8"
+	}
+	if move.IsShortCastle && turn == White {
+		move.Target = "g1"
+	}
+
+	possibleSquares := gs.FindPossibleSquares(move, turn)
+
+	for _, sq := range possibleSquares {
+		tempGS := gs.Copy()
+		tempGS, extendedMoveString, err = tempGS.movePiece(move, turn, sq)
+		if err != nil {
+			return
+		}
+		if isCheck, _ := tempGS.IsGivingCheck(tempGS.PlayerTurn); !isCheck {
+			newGameState = tempGS
+			break
+		}
+	}
+	return
+}
+
 func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (nextState *GameState, extendedMove string, err error) {
 	move, err := ParseMoveString(strings.TrimSpace(ms))
 	if err != nil {
@@ -464,7 +482,7 @@ func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (nextSta
 func (gs *GameState) Copy() (copyGS *GameState) {
 	copyGS = &GameState{
 		PlayerTurn: gs.PlayerTurn,
-		Pieces: make(map[string]piece),
+		Pieces:     make(map[string]piece),
 	}
 	maps.Copy(copyGS.Pieces, gs.Pieces)
 	return
