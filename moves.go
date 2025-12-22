@@ -434,7 +434,6 @@ func (gs *GameState) ApplyMove(move *Move, turn PlayerColor) (newGameState *Game
 	}
 
 	newGameState = gs.Copy()
-	newGameState.PlayerTurn = nextTurn
 
 	if move.IsLongCastle && turn == Black {
 		move.Target = "c8"
@@ -462,6 +461,7 @@ func (gs *GameState) ApplyMove(move *Move, turn PlayerColor) (newGameState *Game
 			break
 		}
 	}
+	newGameState.PlayerTurn = nextTurn
 	return
 }
 
