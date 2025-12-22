@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestGameState(T *testing.T) {
 	tests := []struct{
@@ -86,7 +89,7 @@ func TestGameState(T *testing.T) {
 			T.Errorf("Result string %s does not match expected: %s\n", ems, test.ResultString)
 		}
 
-		if result != test.Result {
+		if !reflect.DeepEqual(result, test.Result) {
 			T.Errorf("Game state does not match expected:\nResult: %v\nExpect: %v\n", result, test.Result)
 		}
 	}
