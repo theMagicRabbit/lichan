@@ -87,7 +87,7 @@ func TestGameState(T *testing.T) {
 		}
 
 		if result != test.Result {
-			T.Errorf("Result state %v does not match expected: %v\n", result, test.Result)
+			T.Errorf("Game state does not match expected:\nResult: %v\nExpect: %v\n", result, test.Result)
 		}
 	}
 }
