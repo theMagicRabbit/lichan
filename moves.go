@@ -433,8 +433,6 @@ func (gs *GameState) ApplyMove(move *Move, turn PlayerColor) (newGameState *Game
 		return
 	}
 
-	newGameState = gs.Copy()
-
 	if move.IsLongCastle && turn == Black {
 		move.Target = "c8"
 	}
@@ -456,10 +454,14 @@ func (gs *GameState) ApplyMove(move *Move, turn PlayerColor) (newGameState *Game
 		if err != nil {
 			return
 		}
-		if isCheck, _ := tempGS.IsGivingCheck(tempGS.PlayerTurn); !isCheck {
+		if isCheck, _ := tempGS.IsGivingCheck(nextTurn); !isCheck {
 			newGameState = tempGS
 			break
 		}
+	}
+	if newGameState == nil {
+		err = fmt.Errorf("No game state\n")
+		return
 	}
 	newGameState.PlayerTurn = nextTurn
 	return
