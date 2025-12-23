@@ -793,6 +793,9 @@ func (gs *GameState) calcRookMoves(rank, file rune, p piece) (squares []string) 
 			break
 		}
 		squares = append(squares, canidateSquare)
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
+		}
 	}
 	for r, f := rank-1, file; r >= '1'; r-- {
 		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
@@ -800,6 +803,9 @@ func (gs *GameState) calcRookMoves(rank, file rune, p piece) (squares []string) 
 			break
 		}
 		squares = append(squares, canidateSquare)
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
+		}
 	}
 	for r, f := rank, file-1; f >= 'a'; f-- {
 		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
@@ -807,6 +813,9 @@ func (gs *GameState) calcRookMoves(rank, file rune, p piece) (squares []string) 
 			break
 		}
 		squares = append(squares, canidateSquare)
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
+		}
 	}
 	for r, f := rank, file+1; f <= 'h'; f++ {
 		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
@@ -814,6 +823,9 @@ func (gs *GameState) calcRookMoves(rank, file rune, p piece) (squares []string) 
 			break
 		}
 		squares = append(squares, canidateSquare)
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
+		}
 	}
 	return
 }
@@ -824,6 +836,11 @@ func (gs *GameState) calcBishopMoves(rank, file rune, p piece) (squares []string
 		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
 		if isValid {
 			squares = append(squares, canidateSquare)
+		} else {
+			break
+		}
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
 		}
 	}
 	// down right
@@ -831,6 +848,11 @@ func (gs *GameState) calcBishopMoves(rank, file rune, p piece) (squares []string
 		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
 		if isValid {
 			squares = append(squares, canidateSquare)
+		} else {
+			break
+		}
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
 		}
 	}
 	// down left
@@ -838,6 +860,11 @@ func (gs *GameState) calcBishopMoves(rank, file rune, p piece) (squares []string
 		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
 		if isValid {
 			squares = append(squares, canidateSquare)
+		} else {
+			break
+		}
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
 		}
 	}
 	// up left
@@ -845,6 +872,11 @@ func (gs *GameState) calcBishopMoves(rank, file rune, p piece) (squares []string
 		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
 		if isValid {
 			squares = append(squares, canidateSquare)
+		} else {
+			break
+		}
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
 		}
 	}
 	return
