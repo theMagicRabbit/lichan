@@ -1,0 +1,1065 @@
+package main
+
+import (
+	"fmt"
+	//"log"
+	"maps"
+	"slices"
+	"strings"
+)
+
+func (gs *GameState) ExtendedStringToMove(extendedMove string) (move *Move, err error) {
+	if inputLen := len(extendedMove); !(inputLen == 4 || inputLen == 5) {
+		err = fmt.Errorf("Invalid move length.\n")
+		return
+	}
+
+	move = &Move{}
+
+	startSquare, endSquare := extendedMove[:2], extendedMove[2:4]
+
+	movedPiece, ok := gs.Pieces[startSquare]
+	if !ok {
+		err = fmt.Errorf("No piece found on %s\n", startSquare)
+		return
+	}
+
+	movedPiece.Square = endSquare
+
+	move.Target = endSquare
+	move.PieceType = movedPiece.PieceType
+
+	var similarPieces []piece
+	for s, p := range gs.Pieces {
+		if s == startSquare {
+			continue
+		}
+
+		if p.PlayerColor == movedPiece.PlayerColor && p.PieceType == move.PieceType {
+			similarPieces = append(similarPieces, p)
+		}
+	}
+
+	if len(extendedMove) == 5 {
+		switch string(extendedMove[4]) {
+		case "q":
+			move.PromoteTo = Queen
+		case "r":
+			move.PromoteTo = Rook
+		case "b":
+			move.PromoteTo = Bishop
+		case "n":
+			move.PromoteTo = Knight
+		default:
+			err = fmt.Errorf("Invalid promotion: %v\n", extendedMove[4])
+			return
+		}
+		movedPiece.PieceType = move.PromoteTo
+	}
+
+	var newState *GameState = &GameState{
+		PlayerTurn: gs.PlayerTurn,
+	}
+	newState.Pieces = make(map[string]piece)
+	maps.Copy(newState.Pieces, gs.Pieces)
+
+	delete(newState.Pieces, startSquare)
+	newState.Pieces[endSquare] = movedPiece
+
+	_, isCapture := gs.Pieces[endSquare]
+	move.IsCapture = isCapture
+
+	var kingSquare string
+	move.IsCheck, kingSquare = newState.IsGivingCheck(movedPiece.PlayerColor)
+
+	if move.IsCheck {
+		move.IsCheckmate, err = gs.IsCheckmated(kingSquare)
+		if move.IsCheckmate {
+			move.IsCheck = false
+		}
+	}
+
+	if move.PieceType == King {
+		if extendedMove == "e1g1" || extendedMove == "e8g8" {
+			move.IsShortCastle = true
+		}
+
+		if extendedMove == "e1c1" || extendedMove == "e8c8" {
+			move.IsLongCastle = true
+		}
+	}
+
+	if move.PieceType == Pawn && move.IsCapture {
+		move.Discriminator = string(startSquare[0])
+	}
+
+	var ambigious []string
+	for _, p := range similarPieces {
+		possibleMoves, _ := gs.calculatePossibleMoves(p)
+		if slices.Contains(possibleMoves, endSquare) {
+			ambigious = append(ambigious, p.Square)
+		}
+	}
+	switch len(ambigious) {
+	case 0:
+	case 1:
+		f1, r1 := startSquare[0], startSquare[1]
+		f2 := ambigious[0][0]
+		if f1 != f2 {
+			move.Discriminator = string(f1)
+		} else {
+			move.Discriminator = string(r1)
+		}
+	default:
+		move.Discriminator = startSquare
+	}
+
+	return
+}
+
+func (gs *GameState) IsCheckmated(kingSqare string) (isCheckmate bool, err error) {
+	king, ok := gs.Pieces[kingSqare]
+	if !ok {
+		err = fmt.Errorf("No piece found found on %s\n", kingSqare)
+		return
+	}
+
+	if king.PieceType != King {
+		err = fmt.Errorf("No king found\n")
+		return
+	}
+
+	var kingCanMove bool = false
+	var canCapture bool = true
+	var canBlock bool = false
+
+	kingMoves, err := gs.calculatePossibleMoves(king)
+	if err != nil {
+		return
+	}
+
+	var opponentMoves []string
+	var checkingPiece []piece
+	var ownPiecesMoves []string
+	for _, piece := range gs.Pieces {
+		if piece.PlayerColor == king.PlayerColor {
+			if possibleMoves, errMoves := gs.calculatePossibleMoves(piece); errMoves != nil {
+				continue
+			} else {
+				ownPiecesMoves = append(ownPiecesMoves, possibleMoves...)
+				continue
+			}
+		}
+		pieceMoves, moveErr := gs.calculatePossibleMoves(piece)
+		if moveErr != nil {
+			continue
+		}
+
+		if slices.Contains(pieceMoves, king.Square) {
+			checkingPiece = append(checkingPiece, piece)
+		}
+
+		opponentMoves = append(opponentMoves, pieceMoves...)
+	}
+
+	for _, km := range kingMoves {
+		if !slices.Contains(opponentMoves, km) {
+			kingCanMove = true
+			break
+		}
+	}
+
+	for _, cp := range checkingPiece {
+		if !slices.Contains(ownPiecesMoves, cp.Square) {
+			canCapture = false
+		}
+
+		if len(checkingPiece) != 1 {
+			continue
+		}
+		if cp.PieceType == Queen || cp.PieceType == Rook || cp.PieceType == Bishop {
+			var pathToKing []string
+			pathToKing, err = gs.calcPathToKing(cp, king)
+			if err != nil {
+				return
+			}
+
+			for _, ownMove := range ownPiecesMoves {
+				if slices.Contains(pathToKing, ownMove) {
+					canBlock = true
+					break
+				}
+			}
+		}
+	}
+
+	isCheckmate = !(kingCanMove || canCapture || canBlock)
+	return
+}
+
+func (gs *GameState) IsGivingCheck(color PlayerColor) (bool, string) {
+	for _, piece := range gs.Pieces {
+		if piece.PlayerColor == color {
+			validMoves, err := gs.calculatePossibleMoves(piece)
+			if err != nil {
+				continue
+			}
+			for _, s := range validMoves {
+				if p, exists := gs.Pieces[s]; exists {
+					if p.PieceType == King && p.PlayerColor != color {
+						return true, p.Square
+					}
+				}
+			}
+		}
+	}
+	return false, ""
+}
+
+func (m *Move) MoveToStandardNotation() (moveString string) {
+	var pieceAbb string
+	switch m.PieceType {
+	case King:
+		pieceAbb = "K"
+	case Queen:
+		pieceAbb = "Q"
+	case Rook:
+		pieceAbb = "R"
+	case Bishop:
+		pieceAbb = "B"
+	case Knight:
+		pieceAbb = "N"
+	case Pawn:
+		pieceAbb = ""
+	}
+
+	var capture string = ""
+	if m.IsCapture {
+		capture = "x"
+	}
+
+	var promotion string = ""
+	switch m.PromoteTo {
+	case Queen:
+		promotion = "=" + "Q"
+	case Rook:
+		promotion = "=" + "R"
+	case Bishop:
+		promotion = "=" + "B"
+	case Knight:
+		promotion = "=" + "N"
+	default:
+		promotion = ""
+	}
+
+	var checkSymbol string
+	if m.IsCheck {
+		checkSymbol = "+"
+	} else if m.IsCheckmate {
+		checkSymbol = "#"
+	} else {
+		checkSymbol = ""
+	}
+
+	moveString = pieceAbb + m.Discriminator + capture + m.Target + promotion + checkSymbol
+	return
+}
+
+func (gs *GameState) PVMovesToStandard(pv []string, pvMoveCounter int, turn PlayerColor) (pgnMoves string, err error) {
+	pgnMoves = "{"
+	var pvGameState *GameState = &GameState{
+		PlayerTurn: gs.PlayerTurn,
+		Pieces:     make(map[string]piece),
+	}
+	maps.Copy(pvGameState.Pieces, gs.Pieces)
+
+	for _, pvMoveString := range pv {
+		pvMove, err := pvGameState.ExtendedStringToMove(pvMoveString)
+		if err != nil {
+			//log.Printf("Unable to parse extended PV move: %s\n", err)
+			break
+		}
+		standardMove := pvMove.MoveToStandardNotation()
+		if pvGameState.PlayerTurn == Black {
+			pgnMoves = fmt.Sprintf("%s %s", pgnMoves, standardMove)
+			pvMoveCounter++
+		} else {
+			pgnMoves = fmt.Sprintf("%s %d. %s", pgnMoves, pvMoveCounter, standardMove)
+		}
+		pvGameState, _, err = pvGameState.ApplyMove(pvMove, pvGameState.PlayerTurn)
+		if err != nil {
+			//log.Printf("Unable to apply move: %v\n", pvMove)
+			break
+		}
+	}
+	pgnMoves = fmt.Sprintf("%s }", pgnMoves)
+	return
+}
+
+func (gs *GameState) FindPossibleSquares(move *Move, turn PlayerColor) (squares []string) {
+	if len(move.Discriminator) == 2 {
+		squares = append(squares, move.Discriminator)
+	} else {
+		for _, boardPiece := range gs.Pieces {
+			if !strings.Contains(boardPiece.Square, move.Discriminator) {
+				continue
+			}
+			if boardPiece.PlayerColor != turn {
+				continue
+			}
+			if boardPiece.PieceType != move.PieceType {
+				continue
+			}
+			if isValid, err := gs.isValidMove(move, boardPiece); err != nil {
+				return
+			} else if !isValid {
+				continue
+			}
+			squares = append(squares, boardPiece.Square)
+		}
+	}
+	return
+}
+
+func (gs *GameState) movePiece(
+	move *Move, turn PlayerColor, sourceSquare string,
+) (newGameState *GameState, extendedMoveString string, err error) {
+	if sourceSquare == "" {
+		err = fmt.Errorf("Source square not found\n")
+		return
+	}
+
+	newGameState = gs.Copy()
+	movedPiece, ok := newGameState.Pieces[sourceSquare]
+	if !ok {
+		err = fmt.Errorf("Piece not found\n")
+		return
+	}
+	movedPiece.Square = move.Target
+
+	var promoteTo string
+	if move.PromoteTo != "" {
+		movedPiece.PieceType = move.PromoteTo
+		switch move.PromoteTo {
+		case Queen:
+			promoteTo = "q"
+		case Rook:
+			promoteTo = "r"
+		case Bishop:
+			promoteTo = "b"
+		case Knight:
+			promoteTo = "n"
+		}
+	}
+
+	if move.IsCapture {
+		if _, targetExists := newGameState.Pieces[move.Target]; targetExists {
+			delete(newGameState.Pieces, move.Target)
+		} else if movedPiece.PieceType != Pawn {
+			err = fmt.Errorf("No piece found on target square: %v\n", move.Target)
+			return
+		} else {
+			targetRank := string(sourceSquare[1])
+			if !(turn == Black && "4" == targetRank) && !(turn == White && "5" == targetRank) {
+				err = fmt.Errorf("Invalid capture to %v attempted\n", move.Target)
+				return
+			}
+
+			targetFile := move.Target[0]
+			enPassantSquare := string(targetFile) + string(targetRank)
+			if targetPawn, exists := newGameState.Pieces[enPassantSquare]; exists &&
+				targetPawn.PieceType == Pawn &&
+				targetPawn.PlayerColor != movedPiece.PlayerColor {
+				delete(newGameState.Pieces, enPassantSquare)
+			} else {
+				err = fmt.Errorf("Invalid capture to %v attempted\n", move.Target)
+				return
+			}
+		}
+	}
+
+	if move.IsLongCastle {
+		var rookSource string
+		var rookDest string
+		if turn == Black {
+			rookSource = "a8"
+			rookDest = "d8"
+		} else {
+			rookSource = "a1"
+			rookDest = "d1"
+		}
+		qRook := newGameState.Pieces[rookSource]
+		qRook.Square = rookDest
+		delete(newGameState.Pieces, rookSource)
+		newGameState.Pieces[rookDest] = qRook
+	}
+
+	if move.IsShortCastle {
+		var rookSource string
+		var rookDest string
+		if turn == Black {
+			rookSource = "h8"
+			rookDest = "f8"
+		} else {
+			rookSource = "h1"
+			rookDest = "f1"
+		}
+		kRook := newGameState.Pieces[rookSource]
+		kRook.Square = rookDest
+		delete(newGameState.Pieces, rookSource)
+		newGameState.Pieces[rookDest] = kRook
+	}
+
+	newGameState.Pieces[move.Target] = movedPiece
+	delete(newGameState.Pieces, sourceSquare)
+
+	extendedMoveString = sourceSquare + move.Target + promoteTo
+	if moveLen := len(extendedMoveString); !(moveLen == 4 || moveLen == 5) {
+		err = fmt.Errorf("Stockfish move is wrong length. source: %s; dest: %s\n", sourceSquare, move.Target)
+		return
+	}
+	return
+}
+
+func (gs *GameState) ApplyMove(move *Move, turn PlayerColor) (newGameState *GameState, extendedMoveString string, err error) {
+	var nextTurn PlayerColor
+	switch gs.PlayerTurn {
+	case White:
+		nextTurn = Black
+	case Black:
+		nextTurn = White
+	default:
+		err = fmt.Errorf("Invalid turn color: %v\n", turn)
+		return
+	}
+
+	if move.IsLongCastle && turn == Black {
+		move.Target = "c8"
+	}
+	if move.IsLongCastle && turn == White {
+		move.Target = "c1"
+	}
+	if move.IsShortCastle && turn == Black {
+		move.Target = "g8"
+	}
+	if move.IsShortCastle && turn == White {
+		move.Target = "g1"
+	}
+
+	possibleSquares := gs.FindPossibleSquares(move, turn)
+
+	for _, sq := range possibleSquares {
+		tempGS := gs.Copy()
+		tempGS, extendedMoveString, err = tempGS.movePiece(move, turn, sq)
+		if err != nil {
+			return
+		}
+		if isCheck, _ := tempGS.IsGivingCheck(nextTurn); !isCheck {
+			newGameState = tempGS
+			break
+		}
+	}
+	if newGameState == nil {
+		err = fmt.Errorf("No game state\n")
+		return
+	}
+	newGameState.PlayerTurn = nextTurn
+	return
+}
+
+func (gs *GameState) ApplyAndTranslateMove(ms string, turn PlayerColor) (nextState *GameState, extendedMove string, err error) {
+	move, err := ParseMoveString(strings.TrimSpace(ms))
+	if err != nil {
+		return
+	}
+
+	nextState, extendedMove, err = gs.ApplyMove(move, gs.PlayerTurn)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (gs *GameState) Copy() (copyGS *GameState) {
+	copyGS = &GameState{
+		PlayerTurn: gs.PlayerTurn,
+		Pieces:     make(map[string]piece),
+	}
+	maps.Copy(copyGS.Pieces, gs.Pieces)
+	return
+}
+
+func (gs *GameState) isValidMove(move *Move, p piece) (isValid bool, err error) {
+	squares, err := gs.calculatePossibleMoves(p)
+	isValid = slices.Contains(squares, move.Target)
+	return
+}
+
+func (gs *GameState) calculatePossibleMoves(p piece) (squares []string, err error) {
+	rank := rune(p.Square[1])
+	file := rune(p.Square[0])
+	square := p.Square
+	if !squareRE.MatchString(square) {
+		err = fmt.Errorf("Not a valid square: %v\n", square)
+		return
+	}
+	if _, ok := IsValidPieceType[p.PieceType]; !ok {
+		err = fmt.Errorf("Not a valid piece: %v\n", p.PieceType)
+		return
+	}
+	var calcFunc func(rune, rune, piece) []string
+	switch p.PieceType {
+	case King:
+		calcFunc = gs.calcKingMoves
+	case Queen:
+		calcFunc = gs.calcQueenMoves
+	case Rook:
+		calcFunc = gs.calcRookMoves
+	case Bishop:
+		calcFunc = gs.calcBishopMoves
+	case Knight:
+		calcFunc = gs.calcKnightMoves
+	case Pawn:
+		calcFunc = gs.calcPawnMoves
+	}
+	squares = calcFunc(rank, file, p)
+	return
+}
+
+func (gs *GameState) calcPathToKing(p piece, k piece) (pathToKing []string, err error) {
+	rank := rune(p.Square[1])
+	file := rune(p.Square[0])
+	square := p.Square
+	if !squareRE.MatchString(square) {
+		err = fmt.Errorf("Not a valid square: %v\n", square)
+		return
+	}
+	if _, ok := IsValidPieceType[p.PieceType]; !ok {
+		err = fmt.Errorf("Not a valid piece: %v\n", p.PieceType)
+		return
+	}
+	var calcFunc func(rune, rune, piece, piece) []string
+	switch p.PieceType {
+	case Bishop:
+		calcFunc = gs.calcBishopPathToKing
+	case Rook:
+		calcFunc = gs.calcRookPathToKing
+	case Queen:
+		calcFunc = gs.calcQueenPathToKing
+	default:
+		err = fmt.Errorf("Invalid piece type: %v\n", p.PieceType)
+		return
+	}
+	pathToKing = calcFunc(rank, file, p, k)
+	return
+}
+
+func (gs *GameState) calcMovesUpRight(rank, file rune, p piece) (squares []string) {
+	for r, f := rank+1, file+1; r <= '8' && f <= 'h'; r, f = r+1, f+1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcMovesUpLeft(rank, file rune, p piece) (squares []string) {
+	for r, f := rank+1, file-1; r <= '8' && f >= 'a'; r, f = r+1, f-1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcMovesDownRight(rank, file rune, p piece) (squares []string) {
+	for r, f := rank-1, file+1; r >= '1' && f <= 'h'; r, f = r-1, f+1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcMovesDownLeft(rank, file rune, p piece) (squares []string) {
+	for r, f := rank-1, file-1; r >= '1' && f >= 'a'; r, f = r-1, f-1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcMovesLeft(rank, file rune, p piece) (squares []string) {
+	for r, f := rank, file-1; f >= 'a'; f-- {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if !isValid {
+			break
+		}
+		squares = append(squares, canidateSquare)
+	}
+	return
+}
+
+func (gs *GameState) calcMovesUp(rank, file rune, p piece) (squares []string) {
+	for r, f := rank+1, file; r <= '8'; r++ {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if !isValid {
+			break
+		}
+		squares = append(squares, canidateSquare)
+	}
+	return
+}
+
+func (gs *GameState) calcMovesRight(rank, file rune, p piece) (squares []string) {
+	for r, f := rank, file+1; f <= 'h'; f++ {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if !isValid {
+			break
+		}
+		squares = append(squares, canidateSquare)
+	}
+	return
+}
+
+func (gs *GameState) calcMovesDown(rank, file rune, p piece) (squares []string) {
+	for r, f := rank-1, file; r >= '1'; r-- {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if !isValid {
+			break
+		}
+		squares = append(squares, canidateSquare)
+	}
+	return
+}
+
+func (gs *GameState) calcBishopPathToKing(rank, file rune, p, k piece) (pathToKing []string) {
+	var bishopMoves []func(rune, rune, piece) []string = []func(rune, rune, piece) []string{
+		gs.calcMovesUpLeft,
+		gs.calcMovesUpRight,
+		gs.calcMovesDownLeft,
+		gs.calcMovesDownRight,
+	}
+	for _, f := range bishopMoves {
+		squares := f(rank, file, p)
+
+		if slices.Contains(squares, k.Square) {
+			pathToKing = squares
+			break
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcRookPathToKing(rank, file rune, p, k piece) (pathToKing []string) {
+	var rookMoves []func(rune, rune, piece) []string = []func(rune, rune, piece) []string{
+		gs.calcMovesLeft,
+		gs.calcMovesRight,
+		gs.calcMovesDown,
+		gs.calcMovesUp,
+	}
+	for _, f := range rookMoves {
+		squares := f(rank, file, p)
+
+		if slices.Contains(squares, k.Square) {
+			pathToKing = squares
+			break
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcQueenPathToKing(rank, file rune, p, k piece) (pathToKing []string) {
+	pathToKing = gs.calcBishopPathToKing(rank, file, p, k)
+	if len(pathToKing) == 0 {
+		pathToKing = gs.calcRookPathToKing(rank, file, p, k)
+	}
+	return
+}
+
+func (gs *GameState) calcKingMoves(rank, file rune, p piece) (squares []string) {
+	upRank := rank + 1
+	downRank := rank - 1
+	leftFile := file - 1
+	rightFile := file + 1
+	canMoveUp := upRank <= '8'
+	canMoveDown := downRank >= '1'
+	canMoveLeft := leftFile >= 'a'
+	canMoveRight := rightFile <= 'h'
+
+	if canMoveUp {
+		upSquare, isValid := gs.checkGameSquare(upRank, file, p)
+		if isValid {
+			squares = append(squares, upSquare)
+		}
+		if canMoveLeft {
+			upLeftSquare, isValid := gs.checkGameSquare(upRank, leftFile, p)
+			if isValid {
+				squares = append(squares, upLeftSquare)
+			}
+		}
+		if canMoveRight {
+			upRightSquare, isValid := gs.checkGameSquare(upRank, rightFile, p)
+			if isValid {
+				squares = append(squares, upRightSquare)
+			}
+		}
+	}
+	if canMoveDown {
+		downSquare, isValid := gs.checkGameSquare(downRank, file, p)
+		if isValid {
+			squares = append(squares, downSquare)
+		}
+		if canMoveLeft {
+			leftSquare, isValid := gs.checkGameSquare(downRank, leftFile, p)
+			if isValid {
+				squares = append(squares, leftSquare)
+			}
+		}
+		if canMoveRight {
+			rightSquare, isValid := gs.checkGameSquare(downRank, rightFile, p)
+			if isValid {
+				squares = append(squares, rightSquare)
+			}
+		}
+	}
+	if canMoveLeft {
+		leftSquare, isValid := gs.checkGameSquare(rank, leftFile, p)
+		if isValid {
+			squares = append(squares, leftSquare)
+		}
+	}
+	if canMoveRight {
+		rightSquare, isValid := gs.checkGameSquare(rank, rightFile, p)
+		if isValid {
+			squares = append(squares, rightSquare)
+		}
+	}
+
+	var startingSquare string
+	if p.PlayerColor == Black {
+		startingSquare = "e8"
+	} else {
+		startingSquare = "e1"
+	}
+	if p.Square == startingSquare {
+		kingRookSquare := string(file+3) + string(rank)
+		if otherPiece, ok := gs.Pieces[kingRookSquare]; ok &&
+			otherPiece.PieceType == Rook &&
+			otherPiece.PlayerColor == p.PlayerColor {
+			kingBishopSquare := string(file+1) + string(rank)
+			kingKnightSquare := string(file+2) + string(rank)
+			_, knightSquareOccupied := gs.Pieces[kingKnightSquare]
+			_, bishopSquareOccupied := gs.Pieces[kingBishopSquare]
+			if !bishopSquareOccupied && !knightSquareOccupied {
+				squares = append(squares, kingKnightSquare)
+			}
+
+		}
+		queenRookSquare := string(file-4) + string(rank)
+		if otherPiece, ok := gs.Pieces[queenRookSquare]; ok &&
+			otherPiece.PieceType == Rook &&
+			otherPiece.PlayerColor == p.PlayerColor {
+			queenBishopSquare := string(file-2) + string(rank)
+			queenKnightSquare := string(file-3) + string(rank)
+			queenSquare := string(file-1) + string(rank)
+			_, knightSquareOccupied := gs.Pieces[queenKnightSquare]
+			_, bishopSquareOccupied := gs.Pieces[queenBishopSquare]
+			_, queenSquareOccupied := gs.Pieces[queenSquare]
+			if !bishopSquareOccupied && !knightSquareOccupied && !queenSquareOccupied {
+				squares = append(squares, queenBishopSquare)
+			}
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcQueenMoves(rank, file rune, p piece) (squares []string) {
+	squares = append(squares, gs.calcRookMoves(rank, file, p)...)
+	squares = append(squares, gs.calcBishopMoves(rank, file, p)...)
+	return
+}
+
+func (gs *GameState) calcRookMoves(rank, file rune, p piece) (squares []string) {
+	for r, f := rank+1, file; r <= '8'; r++ {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if !isValid {
+			break
+		}
+		squares = append(squares, canidateSquare)
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
+		}
+	}
+	for r, f := rank-1, file; r >= '1'; r-- {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if !isValid {
+			break
+		}
+		squares = append(squares, canidateSquare)
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
+		}
+	}
+	for r, f := rank, file-1; f >= 'a'; f-- {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if !isValid {
+			break
+		}
+		squares = append(squares, canidateSquare)
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
+		}
+	}
+	for r, f := rank, file+1; f <= 'h'; f++ {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if !isValid {
+			break
+		}
+		squares = append(squares, canidateSquare)
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcBishopMoves(rank, file rune, p piece) (squares []string) {
+	// up right
+	for r, f := rank+1, file+1; r <= '8' && f <= 'h'; r, f = r+1, f+1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		} else {
+			break
+		}
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
+		}
+	}
+	// down right
+	for r, f := rank-1, file+1; r >= '1' && f <= 'h'; r, f = r-1, f+1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		} else {
+			break
+		}
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
+		}
+	}
+	// down left
+	for r, f := rank-1, file-1; r >= '1' && f >= 'a'; r, f = r-1, f-1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		} else {
+			break
+		}
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
+		}
+	}
+	// up left
+	for r, f := rank+1, file-1; r <= '8' && f >= 'a'; r, f = r+1, f-1 {
+		canidateSquare, isValid := gs.checkGameSquare(r, f, p)
+		if isValid {
+			squares = append(squares, canidateSquare)
+		} else {
+			break
+		}
+		if _, isOccupied := gs.Pieces[canidateSquare]; isOccupied {
+			break
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcKnightMoves(rank, file rune, p piece) (squares []string) {
+	if upTwo := rank + 2; upTwo <= '8' {
+		if leftOne := file - 1; leftOne >= 'a' {
+			canidateSquare, isValid := gs.checkGameSquare(upTwo, leftOne, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+		if rightOne := file + 1; rightOne <= 'h' {
+			canidateSquare, isValid := gs.checkGameSquare(upTwo, rightOne, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+	}
+	if rightTwo := file + 2; rightTwo <= 'h' {
+		if upOne := rank + 1; upOne <= '8' {
+			canidateSquare, isValid := gs.checkGameSquare(upOne, rightTwo, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+		if downOne := rank - 1; downOne >= '1' {
+			canidateSquare, isValid := gs.checkGameSquare(downOne, rightTwo, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+	}
+	if downTwo := rank - 2; downTwo >= '1' {
+		if leftOne := file - 1; leftOne >= 'a' {
+			canidateSquare, isValid := gs.checkGameSquare(downTwo, leftOne, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+		if rightOne := file + 1; rightOne <= 'h' {
+			canidateSquare, isValid := gs.checkGameSquare(downTwo, rightOne, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+	}
+	if leftTwo := file - 2; leftTwo >= 'a' {
+		if upOne := rank + 1; upOne <= '8' {
+			canidateSquare, isValid := gs.checkGameSquare(upOne, leftTwo, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+		if downOne := rank - 1; downOne >= '1' {
+			canidateSquare, isValid := gs.checkGameSquare(downOne, leftTwo, p)
+			if isValid {
+				squares = append(squares, canidateSquare)
+			}
+		}
+	}
+	return
+}
+
+func (gs *GameState) calcPawnMoves(rank, file rune, p piece) (squares []string) {
+	if p.PlayerColor == Black {
+		startRank := '7'
+		nextRank := rank - 1
+		enPassentRank := '4'
+		if canidateSquare, valid := gs.checkPawnMove(nextRank, file); valid {
+			squares = append(squares, canidateSquare)
+			if startRank == rank {
+				if canidateSquare, valid = gs.checkPawnMove(rank-2, file); valid {
+					squares = append(squares, canidateSquare)
+				}
+			}
+		}
+		if leftFile := file - 1; leftFile >= 'a' {
+			captureSquare, validCapture := gs.canCapture(nextRank, leftFile, p)
+			if validCapture {
+				squares = append(squares, captureSquare)
+			} else if rank == enPassentRank {
+				enPassantSquare, validCapture := gs.canCapture(rank, leftFile, p)
+				if validCapture {
+					if otherPiece, _ := gs.Pieces[enPassantSquare]; otherPiece.PieceType == Pawn {
+						if captureSquare, isEmpty := gs.checkPawnMove(nextRank, leftFile); isEmpty {
+							squares = append(squares, captureSquare)
+						}
+					}
+				}
+			}
+		}
+		if rightFile := file + 1; rightFile <= 'h' {
+			captureSquare, validCapture := gs.canCapture(nextRank, rightFile, p)
+			if validCapture {
+				squares = append(squares, captureSquare)
+			} else if rank == enPassentRank {
+				enPassantSquare, validCapture := gs.canCapture(rank, rightFile, p)
+				if validCapture {
+					if otherPiece, _ := gs.Pieces[enPassantSquare]; otherPiece.PieceType == Pawn {
+						if captureSquare, isEmpty := gs.checkPawnMove(nextRank, rightFile); isEmpty {
+							squares = append(squares, captureSquare)
+						}
+					}
+				}
+			}
+		}
+	} else {
+		startRank := '2'
+		nextRank := rank + 1
+		enPassentRank := '5'
+		if canidateSquare, valid := gs.checkPawnMove(nextRank, file); valid {
+			squares = append(squares, canidateSquare)
+			if startRank == rank {
+				if canidateSquare, valid = gs.checkPawnMove(rank+2, file); valid {
+					squares = append(squares, canidateSquare)
+				}
+			}
+		}
+		if leftFile := file - 1; leftFile >= 'a' {
+			captureSquare, validCapture := gs.canCapture(nextRank, leftFile, p)
+			if validCapture {
+				squares = append(squares, captureSquare)
+			} else if rank == enPassentRank {
+				enPassantSquare, validCapture := gs.canCapture(rank, leftFile, p)
+				if validCapture {
+					if otherPiece, _ := gs.Pieces[enPassantSquare]; otherPiece.PieceType == Pawn {
+						if captureSquare, isEmpty := gs.checkPawnMove(nextRank, leftFile); isEmpty {
+							squares = append(squares, captureSquare)
+						}
+					}
+				}
+			}
+		}
+		if rightFile := file + 1; rightFile <= 'h' {
+			captureSquare, validCapture := gs.canCapture(nextRank, rightFile, p)
+			if validCapture {
+				squares = append(squares, captureSquare)
+			} else if rank == enPassentRank {
+				enPassantSquare, validCapture := gs.canCapture(rank, rightFile, p)
+				if validCapture {
+					if otherPiece, _ := gs.Pieces[enPassantSquare]; otherPiece.PieceType == Pawn {
+						if captureSquare, isEmpty := gs.checkPawnMove(nextRank, rightFile); isEmpty {
+							squares = append(squares, captureSquare)
+						}
+					}
+				}
+			}
+		}
+	}
+	return
+}
+
+func (gs *GameState) canCapture(r, f rune, p piece) (captureSquare string, validCapture bool) {
+	captureSquare = string(f) + string(r)
+	if otherPiece, occupiedSquare := gs.Pieces[captureSquare]; occupiedSquare {
+		if otherPiece.PlayerColor != p.PlayerColor {
+			validCapture = true
+			return
+		}
+	}
+	validCapture = false
+	return
+}
+
+func (gs *GameState) checkPawnMove(r, f rune) (canidateSquare string, valid bool) {
+	canidateSquare = string(f) + string(r)
+	valid = false
+	if _, occupiedSquare := gs.Pieces[canidateSquare]; !occupiedSquare {
+		valid = true
+	}
+	return
+}
+
+func (gs *GameState) checkGameSquare(r, f rune, p piece) (canidateSquare string, valid bool) {
+	canidateSquare = string(f) + string(r)
+	if otherPiece, occupiedSquare := gs.Pieces[canidateSquare]; occupiedSquare {
+		if otherPiece.PlayerColor != p.PlayerColor {
+			valid = true
+		}
+	} else {
+		valid = true
+	}
+	return
+}

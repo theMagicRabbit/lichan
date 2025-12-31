@@ -8,3 +8,9 @@ usernames = [ "a_lurk", ]
 # Username will be appended to this path so each user's games are
 # stored in their own folder.
 game_directory = "~/Games/lichess/"
+
+# Engine directory is where stockfish will create subfolders of processed
+# games. As with the game_directory, lichan will append the username of the
+# player being processed.
+engine_directory = "~/Games/engine/stockfish/"
+
